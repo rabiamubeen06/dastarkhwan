@@ -1,0 +1,53 @@
+@font-face{font-family:"Noto Nastaliq Urdu";src:url("../fonts/NotoNastaliqUrdu.ttf") format("truetype");font-display:swap}
+
+:root{color-scheme:dark;--bg:#0a3a35;--header:#06302c;--surface:#0e4a44;--line:#25786d;--ink:#e9fbf5;--mute:#a5d6cb;--accent:#3fd9a0;--accent-ink:#04302a;--bad:#ffc2b8;--ok:#a7f3d0}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg)}
+a{color:var(--accent)}
+
+/* Urdu brand text */
+.ur{font-family:"Noto Nastaliq Urdu","Jameel Noori Nastaleeq","Noto Naskh Arabic","Segoe UI",serif;line-height:1.9}
+.ur-big{font-size:2.4rem;line-height:2;color:var(--accent);text-align:center}
+
+/* Centered logo block on login and signup */
+.auth-brand{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:4px;color:var(--accent);margin-bottom:12px}
+.auth-brand .logo{display:block;margin:0 auto}
+
+/* Header */
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--header);border-bottom:1px solid var(--line);padding:8px 20px}
+.top a{color:var(--ink);text-decoration:none}
+.brand{display:flex;align-items:center;gap:10px;font-size:1.5rem;color:var(--accent)!important}
+nav{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.inline{display:inline;margin:0}
+.linkbtn{background:none;border:0;color:var(--ink);font:inherit;cursor:pointer;text-decoration:underline;padding:0}
+
+/* Layout and cards */
+.wrap{max-width:960px;margin:0 auto;padding:24px 20px;min-height:70vh}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:24px}
+.narrow{max-width:440px;margin:20px auto}
+h1{margin:0 0 14px;font-size:1.5rem}
+
+/* Forms */
+label{display:block;margin:12px 0 4px;font-size:14px;color:var(--mute)}
+input{display:block;width:100%;margin-top:4px;padding:10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit}
+input::placeholder{color:#6fa89d}
+input:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Buttons */
+.btn{display:inline-block;margin-top:16px;padding:10px 18px;background:var(--accent);color:var(--accent-ink);border:0;border-radius:6px;font:inherit;font-weight:600;cursor:pointer;text-decoration:none}
+.btn:hover{filter:brightness(1.1)}
+.btn.small{margin:0;padding:6px 12px}
+.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.top .btn.small{background:var(--accent);color:var(--accent-ink)}
+
+/* Messages */
+.alert{padding:10px 14px;border-radius:6px;margin-bottom:14px;font-size:14px}
+.alert.error{background:rgba(255,160,140,.16);color:var(--bad)}
+.alert.success{background:rgba(63,217,160,.16);color:var(--ok)}
+.field-error{color:var(--bad);font-size:13px;margin-top:4px}
+.muted{color:var(--mute);font-size:14px}
+
+/* Home and footer */
+.hero{text-align:center;padding:48px 0}
+.hero h1{font-size:2rem}
+.foot{text-align:center;color:var(--mute);font-size:13px;padding:20px;border-top:1px solid var(--line)}

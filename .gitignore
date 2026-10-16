@@ -1,0 +1,4 @@
+config/config.php
+storage/*.log
+.env
+README.md
