@@ -1,0 +1,1 @@
+ALTER TABLE settings MODIFY setting_value TEXT NOT NULL;

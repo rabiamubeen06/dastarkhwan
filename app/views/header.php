@@ -6,6 +6,11 @@ $onDash = str_ends_with($script, 'dashboard.php');
 $onCatalog = str_ends_with($script, 'catalog.php');
 $onCart = str_ends_with($script, 'cart.php');
 $cartCount = CartService::count();
+$isAdmin = ($u['role'] ?? '') === 'admin';
+$onProducts = str_contains($script, '/admin/product');
+$onCategories = str_contains($script, '/admin/categories');
+$onZones = str_contains($script, '/admin/delivery-zones');
+$onSettings = str_contains($script, '/admin/settings');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -30,7 +35,14 @@ $cartCount = CartService::count();
   <a class="brand" href="<?= e(url('/')) ?>"><?= logo_svg(26) ?><?= brand_ur() ?></a>
   <nav>
     <a href="<?= e(url('catalog.php')) ?>" class="<?= $onCatalog ? 'active' : '' ?>">Catalog</a>
-    <a href="<?= e(url('cart.php')) ?>" class="<?= $onCart ? 'active' : '' ?>">Cart<?php if ($cartCount > 0): ?> <span class="badge"><?= $cartCount ?></span><?php endif; ?></a>
+    <?php if ($isAdmin): ?>
+      <a href="<?= e(url('admin/products.php')) ?>" class="<?= $onProducts ? 'active' : '' ?>">Products</a>
+      <a href="<?= e(url('admin/categories.php')) ?>" class="<?= $onCategories ? 'active' : '' ?>">Categories</a>
+      <a href="<?= e(url('admin/delivery-zones.php')) ?>" class="<?= $onZones ? 'active' : '' ?>">Delivery</a>
+      <a href="<?= e(url('admin/settings.php')) ?>" class="<?= $onSettings ? 'active' : '' ?>">Settings</a>
+    <?php else: ?>
+      <a href="<?= e(url('cart.php')) ?>" class="<?= $onCart ? 'active' : '' ?>">Cart<?php if ($cartCount > 0): ?> <span class="badge"><?= $cartCount ?></span><?php endif; ?></a>
+    <?php endif; ?>
     <?php if ($u): ?>
       <a href="<?= e(url(Auth::homeUrl())) ?>" class="<?= $onDash ? 'active' : '' ?>">Dashboard</a>
       <div class="user">

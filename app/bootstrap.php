@@ -11,6 +11,10 @@ require __DIR__ . '/services/AvailibilityService.php';
 require __DIR__ . '/services/CartService.php';
 require __DIR__ . '/services/PricingService.php';
 require __DIR__ . '/services/BookingService.php';
+require __DIR__ . '/services/CategoryService.php';
+require __DIR__ . '/services/ProductService.php';
+require __DIR__ . '/services/SettingService.php';
+require __DIR__ . '/services/DeliveryZoneService.php';
 
 date_default_timezone_set('Asia/Karachi');
 error_reporting(E_ALL);
