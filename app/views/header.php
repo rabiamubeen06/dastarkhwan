@@ -11,6 +11,7 @@ $onProducts = str_contains($script, '/admin/product');
 $onCategories = str_contains($script, '/admin/categories');
 $onPackages = str_ends_with($script, '/packages.php') && !str_contains($script, '/admin/');
 $onAdminPackages = str_contains($script, '/admin/package');
+$onInventory = str_contains($script, '/admin/inventory');
 $onZones = str_contains($script, '/admin/delivery-zones');
 $onSettings = str_contains($script, '/admin/settings');
 $onBookings = str_contains($script, '/admin/booking');
@@ -43,6 +44,7 @@ $pendingCount = $isAdmin ? BookingAdminService::pendingCount() : 0;
     <?php if ($isAdmin): ?>
       <a href="<?= e(url('admin/bookings.php')) ?>" class="<?= $onBookings ? 'active' : '' ?>">Bookings<?php if ($pendingCount > 0): ?> <span class="badge"><?= $pendingCount ?></span><?php endif; ?></a>
       <a href="<?= e(url('admin/products.php')) ?>" class="<?= $onProducts ? 'active' : '' ?>">Products</a>
+      <a href="<?= e(url('admin/inventory.php')) ?>" class="<?= $onInventory ? 'active' : '' ?>">Inventory</a>
       <a href="<?= e(url('admin/packages.php')) ?>" class="<?= $onAdminPackages ? 'active' : '' ?>">Packages</a>
       <a href="<?= e(url('admin/categories.php')) ?>" class="<?= $onCategories ? 'active' : '' ?>">Categories</a>
       <a href="<?= e(url('admin/delivery-zones.php')) ?>" class="<?= $onZones ? 'active' : '' ?>">Delivery</a>

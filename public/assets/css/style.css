@@ -273,3 +273,17 @@ input.qty.remarks{width:100%;min-width:140px}
 .pkg-foot .price{margin:0 0 12px}
 .pkg-bar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:24px}
 .pkg-apply{margin-bottom:8px}
+
+/* Inventory calendar (A-03) */
+.cal-wrap{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);overflow-x:auto}
+.cal-table{width:100%;border-collapse:collapse;font-size:14px}
+.cal-table th{padding:10px 6px;text-align:center;font-size:12px;font-weight:600;color:var(--mute);border-bottom:1px solid var(--line);white-space:nowrap}
+.cal-table th.today{color:var(--primary)}
+.cal-table td{padding:10px 6px;text-align:center;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.cal-table tbody tr:last-child td{border-bottom:0}
+.cal-table .cal-name{position:sticky;left:0;z-index:1;min-width:190px;padding:10px 16px;text-align:left;background:var(--card);border-right:1px solid var(--line)}
+.cal-table td.low{background:var(--warn-bg);color:var(--warn)}
+.cal-table td.zero{background:var(--bad-bg);color:var(--bad);font-weight:600}
+.cal-key{display:inline-block;width:10px;height:10px;margin:0 4px 0 12px;border:1px solid var(--line);border-radius:2px;vertical-align:middle}
+.cal-key.low{background:var(--warn-bg)}
+.cal-key.zero{background:var(--bad-bg)}

@@ -83,6 +83,7 @@ require APP_PATH . '/views/header.php';
             </td>
             <td class="num">
               <a href="<?= e(url('admin/product-form.php?id=' . (int) $p['product_id'])) ?>">Edit</a>
+              &nbsp;<a href="<?= e(url('admin/inventory-product.php?id=' . (int) $p['product_id'])) ?>">Stock</a>
               &nbsp;<form method="post" class="inline">
                 <?= Csrf::field() ?>
                 <input type="hidden" name="product_id" value="<?= (int) $p['product_id'] ?>">
