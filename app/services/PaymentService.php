@@ -85,6 +85,27 @@ final class PaymentService
     }
 
     /**
+     * What the customer should pay next (shown on their booking page, C-13).
+     * The advance comes first; once it is paid, the remaining balance.
+     * @param array $summary result of summary()
+     * @return array{label:string,amount:float} amount is 0 when nothing is due
+     */
+    public static function dueNow(array $summary, string $status): array
+    {
+        if (in_array($status, ['rejected', 'cancelled'], true)) {
+            return ['label' => '', 'amount' => 0.0];
+        }
+        $advance = round(max(0, $summary['advance_required'] - $summary['advance_paid']), 2);
+        if ($advance > 0) {
+            return ['label' => 'Advance due', 'amount' => $advance];
+        }
+        if ($summary['balance_due'] > 0) {
+            return ['label' => 'Balance due', 'amount' => (float) $summary['balance_due']];
+        }
+        return ['label' => '', 'amount' => 0.0];
+    }
+
+    /**
      * Check the payment form for this booking.
      * @return array{0:array<string,string>,1:array<string,mixed>} [errors, clean values]
      */

@@ -70,12 +70,14 @@ function logo_svg(int $size = 28): string
          . '<path d="M23 28V4c-3.5 1.5-5 5-5 9 0 2 1 3 3 3h2"/>'
          . '</svg>';
 }
+
 /** Format an amount as PKR, e.g. PKR 1,250 or PKR 1,250.50. */
 function money(float|int|string $amount): string
 {
     $s = number_format((float) $amount, 2);
     return 'PKR ' . (str_ends_with($s, '.00') ? substr($s, 0, -3) : $s);
 }
+
 /** Read one value from the settings table (loaded once per request). */
 function setting(string $key, string $default = ''): string
 {
@@ -84,4 +86,15 @@ function setting(string $key, string $default = ''): string
         $all = Database::pdo()->query('SELECT setting_key, setting_value FROM settings')->fetchAll(PDO::FETCH_KEY_PAIR);
     }
     return $all[$key] ?? $default;
+}
+
+/** wa.me chat link with a ready-typed message. Returns '' when there is no number. */
+function whatsapp_link(string $number, string $message): string
+{
+    $digits = preg_replace('/\D+/', '', $number) ?? '';
+    if ($digits === '') {
+        return '';
+    }
+    $digits = Auth::normalizePhone($digits) ?? $digits;
+    return 'https://wa.me/' . $digits . '?text=' . rawurlencode($message);
 }

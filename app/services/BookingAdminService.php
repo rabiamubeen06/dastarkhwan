@@ -19,7 +19,7 @@ final class BookingAdminService
         return self::STATUSES[$status] ?? ucfirst($status);
     }
 
-
+    /** CSS class for the status pill: pending = amber, closed = red, everything else = green. */
     public static function statusClass(string $status): string
     {
         return match ($status) {
@@ -146,15 +146,12 @@ final class BookingAdminService
     }
 
     /**
-     * Confirm a pending booking. Stock is re-checked inside a transaction while the booking and
+     * Confirm a pending booking once its advance payment is recorded (A-05). Stock is re-checked inside a transaction while the booking and
      * product rows are locked (SELECT ... FOR UPDATE), so two admins cannot double-book the same items.
      * @return array{ok:bool,error?:string,conflicts?:array<int,array{name:string,wanted:int,available:int}>}
      */
-    public static function confirm(int $id, int $adminId, string $note, bool $advanceReceived): array
+    public static function confirm(int $id, int $adminId, string $note): array
     {
-        if (!$advanceReceived) {
-            return ['ok' => false, 'error' => 'Tick the box to confirm the advance has been received. Stock is locked only after the advance.'];
-        }
         [$noteErr, $note] = self::validateNote($note, false);
         if ($noteErr !== null) {
             return ['ok' => false, 'error' => $noteErr];
@@ -170,7 +167,7 @@ final class BookingAdminService
             $pdo->beginTransaction();
             $lock = $mysql ? ' FOR UPDATE' : '';
 
-            $st = $pdo->prepare('SELECT status, start_date, end_date FROM bookings WHERE booking_id = ?' . $lock);
+            $st = $pdo->prepare('SELECT status, start_date, end_date, total_amount FROM bookings WHERE booking_id = ?' . $lock);
             $st->execute([$id]);
             $b = $st->fetch();
             if (!$b) {
@@ -184,6 +181,16 @@ final class BookingAdminService
             if ($b['start_date'] < date('Y-m-d')) {
                 $pdo->rollBack();
                 return ['ok' => false, 'error' => 'The start date has already passed, so this booking cannot be confirmed. Reject it instead.'];
+            }
+
+            // Stock is locked only after the advance is received: it must be recorded as a payment first.
+            $st = $pdo->prepare("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE booking_id = ? AND type = 'advance'");
+            $st->execute([$id]);
+            $paid = (int) round(((float) $st->fetchColumn()) * 100);
+            $need = (int) round(self::advanceAmount($b) * 100);
+            if ($paid < $need) {
+                $pdo->rollBack();
+                return ['ok' => false, 'error' => 'Record the advance payment first: ' . money($need / 100) . ' is required, ' . money($paid / 100) . ' recorded. Stock is locked only after the advance.'];
             }
 
             // Lock the product rows in a fixed order (prevents deadlocks between two confirmations).
