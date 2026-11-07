@@ -250,6 +250,53 @@ final class BookingAdminService
         return self::close($id, $adminId, $note, 'cancelled', ['pending', 'confirmed'], 'Cancelled');
     }
 
+    /** confirmed -> delivered (items handed over or picked up). @return array{ok:bool,error?:string} */
+    public static function markDelivered(int $id, int $adminId, string $note): array
+    {
+        return self::move($id, $adminId, $note, 'delivered', ['confirmed'], 'Marked as delivered');
+    }
+
+    /** delivered -> return_pending (event over, waiting for the items). @return array{ok:bool,error?:string} */
+    public static function markReturnPending(int $id, int $adminId, string $note): array
+    {
+        return self::move($id, $adminId, $note, 'return_pending', ['delivered'], 'Event over, awaiting return');
+    }
+
+    /** One step forward along the main status path. The optional note goes into the internal notes only. */
+    private static function move(int $id, int $adminId, string $note, string $to, array $from, string $line): array
+    {
+        [$err, $note] = self::validateNote($note, false);
+        if ($err !== null) {
+            return ['ok' => false, 'error' => $err];
+        }
+        $pdo = Database::pdo();
+        $mysql = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql';
+        try {
+            $pdo->beginTransaction();
+            $st = $pdo->prepare('SELECT status FROM bookings WHERE booking_id = ?' . ($mysql ? ' FOR UPDATE' : ''));
+            $st->execute([$id]);
+            $status = $st->fetchColumn();
+            if ($status === false) {
+                $pdo->rollBack();
+                return ['ok' => false, 'error' => 'That booking was not found.'];
+            }
+            if (!in_array($status, $from, true)) {
+                $pdo->rollBack();
+                return ['ok' => false, 'error' => 'This booking is ' . strtolower(self::statusLabel((string) $status)) . ', so this step is not available.'];
+            }
+            $pdo->prepare('UPDATE bookings SET status = ?, admin_notes = ? WHERE booking_id = ? AND status = ?')
+                ->execute([$to, self::appendNote($id, $adminId, $line, $note), $id, $status]);
+            $pdo->commit();
+            return ['ok' => true];
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            error_log('Status change failed: ' . $e->getMessage());
+            return ['ok' => false, 'error' => 'Something went wrong. Please try again.'];
+        }
+    }
+
     private static function close(int $id, int $adminId, string $note, string $to, array $from, string $label): array
     {
         [$err, $note] = self::validateNote($note, true);
@@ -290,7 +337,7 @@ final class BookingAdminService
     }
 
     /** Adds a dated line to the booking's notes: "[2026-11-06 14:30 Admin Name] Rejected: reason". */
-    private static function appendNote(int $id, int $adminId, string $action, string $note): string
+    public static function appendNote(int $id, int $adminId, string $action, string $note): string
     {
         $pdo = Database::pdo();
         $st = $pdo->prepare('SELECT admin_notes FROM bookings WHERE booking_id = ?');

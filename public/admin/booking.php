@@ -25,6 +25,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ok = !empty($res['non_refundable'])
             ? 'Booking cancelled. The event is within ' . BookingAdminService::NON_REFUNDABLE_DAYS . ' days, so the advance is non-refundable.'
             : 'Booking cancelled.';
+    } elseif ($action === 'deliver') {
+        $res = BookingAdminService::markDelivered($id, $admin['id'], $note);
+        $ok = 'Booking marked as delivered.';
+    } elseif ($action === 'returnpending') {
+        $res = BookingAdminService::markReturnPending($id, $admin['id'], $note);
+        $ok = 'Booking marked as awaiting return.';
     }
     if ($action === 'payment') {
         $pr = PaymentService::record($id, $admin['id'], $_POST);
@@ -54,6 +60,10 @@ if ($b === null) {
 
 $pending   = $b['status'] === 'pending';
 $canCancel = in_array($b['status'], ['pending', 'confirmed'], true);
+$canDeliver = $b['status'] === 'confirmed';
+$canReturnPending = $b['status'] === 'delivered';
+$canReceive = in_array($b['status'], ReturnService::RECEIVABLE, true);
+$return    = ReturnService::forBooking($id);
 $avail     = $pending ? BookingAdminService::itemAvailability($b) : [];
 $pay       = PaymentService::summary($b);
 $payments  = PaymentService::forBooking($id);
@@ -114,6 +124,33 @@ require APP_PATH . '/views/header.php';
         </tbody>
       </table>
     </div>
+
+    <?php if ($return): ?>
+      <h2 class="mt">Return</h2>
+      <dl class="facts">
+        <div><dt>Received</dt><dd><?= e(date('j M Y, g:i a', strtotime($return['returned_at']))) ?> by <?= e((string) $return['received_by_name']) ?></dd></div>
+        <div><dt>Late fee</dt><dd><?= e(money($return['late_fee'])) ?> (<?= (int) $return['late_days'] ?> late day<?= (int) $return['late_days'] === 1 ? '' : 's' ?>)</dd></div>
+        <div><dt>Damage and loss charges</dt><dd><?= e(money($return['damage_total'])) ?></dd></div>
+        <div><dt>Total charges</dt><dd><strong><?= e(money($return['charges_total'])) ?></strong> <span class="muted small-text">(settled against the security deposit)</span></dd></div>
+        <?php if ($return['notes']): ?><div><dt>Return note</dt><dd><?= e($return['notes']) ?></dd></div><?php endif; ?>
+      </dl>
+      <div class="cart-table-wrap mt">
+        <table class="cart-table">
+          <thead><tr><th>Item</th><th>Returned</th><th>Damaged</th><th>Missing</th><th class="num">Charge</th></tr></thead>
+          <tbody>
+            <?php foreach ($return['lines'] as $l): ?>
+              <tr>
+                <td data-label="Item"><strong><?= e($l['name']) ?></strong><?php if ($l['remarks']): ?><div class="muted small-text"><?= e($l['remarks']) ?></div><?php endif; ?></td>
+                <td data-label="Returned"><?= (int) $l['qty_returned'] ?> of <?= (int) $l['quantity'] ?></td>
+                <td data-label="Damaged"><?= (int) $l['qty_damaged'] ?></td>
+                <td data-label="Missing"><?= (int) $l['qty_missing'] ?></td>
+                <td data-label="Charge" class="num"><?= e(money($l['damage_charge'])) ?></td>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    <?php endif; ?>
 
     <h2 class="mt">Payments</h2>
     <?php if (!$payments): ?>
@@ -194,6 +231,39 @@ require APP_PATH . '/views/header.php';
       </section>
     <?php endif; ?>
 
+    <?php if ($canDeliver || $canReturnPending || $canReceive): ?>
+      <section class="panel mt">
+        <h2>Delivery and return</h2>
+        <?php if (isset($errors['deliver']) || isset($errors['returnpending'])): ?><div class="alert error"><?= e($errors['deliver'] ?? $errors['returnpending']) ?></div><?php endif; ?>
+        <?php if ($canDeliver): ?>
+          <?php if ($pay['balance_due'] > 0 || $pay['deposit_received'] < $pay['deposit_required']): ?>
+            <div class="alert warning">Still unpaid:
+              <?= $pay['balance_due'] > 0 ? 'balance ' . e(money($pay['balance_due'])) : '' ?><?= $pay['balance_due'] > 0 && $pay['deposit_received'] < $pay['deposit_required'] ? ' and ' : '' ?><?= $pay['deposit_received'] < $pay['deposit_required'] ? 'security deposit ' . e(money($pay['deposit_required'] - $pay['deposit_received'])) : '' ?>.</div>
+          <?php endif; ?>
+          <p class="muted small-text">Mark as delivered when the items are handed over or collected.</p>
+          <form method="post">
+            <?= Csrf::field() ?>
+            <input type="hidden" name="action" value="deliver">
+            <input type="hidden" name="booking_id" value="<?= (int) $b['booking_id'] ?>">
+            <div class="cart-actions"><button class="btn" type="submit">Mark as delivered</button></div>
+          </form>
+        <?php endif; ?>
+        <?php if ($canReturnPending): ?>
+          <p class="muted small-text">When the event is over, mark the booking as awaiting return.</p>
+          <form method="post">
+            <?= Csrf::field() ?>
+            <input type="hidden" name="action" value="returnpending">
+            <input type="hidden" name="booking_id" value="<?= (int) $b['booking_id'] ?>">
+            <div class="cart-actions"><button class="btn ghost" type="submit">Event over, awaiting return</button></div>
+          </form>
+        <?php endif; ?>
+        <?php if ($canReceive): ?>
+          <p class="muted small-text<?= $canReturnPending ? ' mt' : '' ?>">When the items are back, count them and record any damage.</p>
+          <div class="cart-actions"><a class="btn<?= $canReturnPending ? '' : ' block' ?>" href="<?= e(url('admin/booking-return.php?id=' . (int) $b['booking_id'])) ?>">Receive items</a></div>
+        <?php endif; ?>
+      </section>
+    <?php endif; ?>
+
     <?php if ($nonRef): ?>
       <div class="alert warning mt">The event starts within <?= BookingAdminService::NON_REFUNDABLE_DAYS ?> days. If this booking is cancelled now, the advance is non-refundable.</div>
     <?php endif; ?>
@@ -255,7 +325,7 @@ require APP_PATH . '/views/header.php';
       </section>
     <?php endif; ?>
 
-    <?php if (!$canCancel): ?>
+    <?php if (!$canCancel && !$canDeliver && !$canReceive): ?>
       <p class="muted small-text mt">No actions are available at this stage.</p>
     <?php endif; ?>
   </div>
