@@ -21,6 +21,7 @@ require __DIR__ . '/services/PaymentService.php';
 require __DIR__ . '/services/ReturnService.php';
 require __DIR__ . '/services/DepositService.php';
 require __DIR__ . '/services/InventoryService.php';
+require __DIR__ . '/services/DashboardService.php';
 
 date_default_timezone_set('Asia/Karachi');
 error_reporting(E_ALL);
