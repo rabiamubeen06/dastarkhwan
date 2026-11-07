@@ -10,6 +10,9 @@ if ($b === null) {
 }
 
 $pv       = PaymentService::customerView($b);
+$dep      = $pv['deposit'];
+$rt       = ReturnService::customerView($b);
+$ret      = $rt['return'];
 $pay      = $pv['summary'];
 $payments = PaymentService::forBooking((int) $b['booking_id']);
 $closed   = in_array($b['status'], ['rejected', 'cancelled'], true);
@@ -36,11 +39,30 @@ require APP_PATH . '/views/header.php';
   </div>
 <?php endif; ?>
 
+<?php if ($rt['steps']): ?>
+  <ol class="track" aria-label="Rental progress">
+    <?php foreach ($rt['steps'] as $st): ?>
+      <li class="<?= e($st['state']) ?>"><?= e($st['label']) ?></li>
+    <?php endforeach; ?>
+  </ol>
+<?php endif; ?>
+
+<?php if ($rt['overdue_days'] > 0): ?>
+  <div class="alert warning">
+    <strong>Your items are overdue.</strong>
+    They were due back on <?= e($fmt($rt['due_back'])) ?>. A late fee of <?= e(money($rt['late_rate'])) ?> a day applies:
+    <?= (int) $rt['overdue_days'] ?> day<?= $rt['overdue_days'] === 1 ? '' : 's' ?> so far (<?= e(money($rt['overdue_fee'])) ?>). Please return them as soon as you can.
+  </div>
+<?php elseif ($rt['due_back'] !== null && $b['status'] !== 'confirmed'): ?>
+  <p class="muted">Please return the items by <strong><?= e($fmt($rt['due_back'])) ?></strong>. After that a late fee of <?= e(money($rt['late_rate'])) ?> a day applies.</p>
+<?php endif; ?>
+
 <div class="checkout">
   <div>
     <dl class="facts">
       <div><dt>Event</dt><dd><?= e(BookingService::EVENT_TYPES[$b['event_type']] ?? $b['event_type']) ?><?= $b['event_name'] ? ' &middot; ' . e($b['event_name']) : '' ?></dd></div>
       <div><dt>Dates</dt><dd><?= e($fmt($b['start_date'])) ?> to <?= e($fmt($b['end_date'])) ?> (<?= (int) $b['rental_days'] ?> day<?= (int) $b['rental_days'] === 1 ? '' : 's' ?>)</dd></div>
+      <?php if ($rt['due_back'] !== null): ?><div><dt>Due back</dt><dd><?= e($fmt($rt['due_back'])) ?></dd></div><?php endif; ?>
       <div><dt>Receiving</dt><dd><?= $b['delivery_method'] === 'delivery'
           ? 'Delivery to ' . e((string) $b['delivery_address']) . ($b['zone_city'] ? ' (' . e($b['zone_city'] . ', ' . $b['zone_area']) . ')' : '')
           : 'Pickup from the shop' ?></dd></div>
@@ -63,6 +85,31 @@ require APP_PATH . '/views/header.php';
         </tbody>
       </table>
     </div>
+
+    <?php if ($ret): ?>
+      <h2 class="mt">Return</h2>
+      <dl class="facts">
+        <div><dt>Items received</dt><dd><?= e(date('j M Y, g:i a', strtotime($ret['returned_at']))) ?></dd></div>
+        <?php if ($ret['late_days'] > 0): ?><div><dt>Late fee</dt><dd><?= e(money($ret['late_fee'])) ?> (<?= (int) $ret['late_days'] ?> late day<?= $ret['late_days'] === 1 ? '' : 's' ?>)</dd></div><?php endif; ?>
+        <div><dt>Damage and loss charges</dt><dd><?= e($ret['damage_total'] > 0 ? money($ret['damage_total']) : 'None') ?></dd></div>
+      </dl>
+      <div class="cart-table-wrap mt">
+        <table class="cart-table">
+          <thead><tr><th>Item</th><th>Returned</th><th>Damaged</th><th>Missing</th><th class="num">Charge</th></tr></thead>
+          <tbody>
+            <?php foreach ($ret['lines'] as $l): ?>
+              <tr>
+                <td data-label="Item"><strong><?= e($l['name']) ?></strong></td>
+                <td data-label="Returned"><?= (int) $l['returned'] ?> of <?= (int) $l['booked'] ?></td>
+                <td data-label="Damaged"><?= (int) $l['damaged'] ?></td>
+                <td data-label="Missing"><?= (int) $l['missing'] ?></td>
+                <td data-label="Charge" class="num"><?= e(money($l['charge'])) ?></td>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    <?php endif; ?>
 
     <h2 class="mt">Payments</h2>
     <?php if (!$payments): ?>
@@ -95,8 +142,23 @@ require APP_PATH . '/views/header.php';
       <div class="total"><dt>Total</dt><dd><?= e(money($b['total_amount'])) ?></dd></div>
       <div class="after"><dt>Paid so far</dt><dd><?= e(money($pay['paid'])) ?></dd></div>
       <?php if (!$closed): ?><div class="after"><dt>Balance due</dt><dd><?= e(money($pay['balance_due'])) ?></dd></div><?php endif; ?>
-      <div class="after"><dt>Refundable security deposit</dt><dd><?= e(money($pay['deposit_received'])) ?> of <?= e(money($pay['deposit_required'])) ?></dd></div>
-      <?php if ($pay['refunded'] > 0): ?><div class="after"><dt>Refunded to you</dt><dd><?= e(money($pay['refunded'])) ?></dd></div><?php endif; ?>
+      <?php if (!$ret): ?>
+        <div class="after"><dt>Refundable security deposit</dt><dd><?= e(money($pay['deposit_received'])) ?> of <?= e(money($pay['deposit_required'])) ?></dd></div>
+      <?php else: ?>
+        <div class="after"><dt>Security deposit held</dt><dd><?= e(money($dep['held'])) ?></dd></div>
+        <div class="after"><dt>Return charges</dt><dd><?= e(money($ret['charges_total'])) ?></dd></div>
+        <?php if ($dep['settled']): ?>
+          <div class="after"><dt>Deducted from deposit</dt><dd><?= e(money($dep['deduct'])) ?></dd></div>
+          <div class="after"><dt>Deposit refunded</dt><dd><?= e(money($dep['refund'])) ?></dd></div>
+        <?php else: ?>
+          <div class="after"><dt>Deposit</dt><dd>Being settled by the shop</dd></div>
+        <?php endif; ?>
+        <?php if ($dep['extra_owed'] > 0): ?>
+          <div class="after"><dt>Charges above the deposit</dt><dd><?= e(money($dep['extra_owed'])) ?></dd></div>
+          <div class="after"><dt>Paid so far</dt><dd><?= e(money($dep['extra_paid'])) ?></dd></div>
+        <?php endif; ?>
+      <?php endif; ?>
+      <?php if (!$ret && $pay['refunded'] > 0): ?><div class="after"><dt>Refunded to you</dt><dd><?= e(money($pay['refunded'])) ?></dd></div><?php endif; ?>
     </dl>
 
     <?php require APP_PATH . '/views/payment-panel.php'; ?>

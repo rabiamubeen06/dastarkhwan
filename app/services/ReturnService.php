@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * Admin: return checklist after an event.
+ * Admin: return checklist after an event (A-07).
  * Every booked unit is accounted for as returned (good), damaged or missing. Damaged and missing units
  * are charged at the replacement cost (or an amount the admin types), and a late fee is added for each day
  * after the rental end date. Damaged and missing units also leave the available stock.
@@ -79,6 +79,55 @@ final class ReturnService
         $r['damage_total']  = $damage / 100;
         $r['charges_total'] = ($damage + $late) / 100;
         return $r;
+    }
+
+    /** The steps of the rental as the customer sees them, once the booking is confirmed. */
+    public const TRACK = ['confirmed', 'delivered', 'return_pending', 'returned', 'completed'];
+
+    /**
+     * What a customer may see about the return (C-10): where the rental is, when the items are due back,
+     * late fee so far, and after the return the counts and charges. Internal remarks, notes and the name of the
+     * admin who received the items are left out on purpose. $booking is a row from BookingService::find().
+     */
+    public static function customerView(array $booking, ?string $today = null): array
+    {
+        $today = $today ?? date('Y-m-d');
+        $status = (string) $booking['status'];
+        $at = array_search($status, self::TRACK, true);
+        $steps = [];
+        if ($at !== false) {
+            foreach (self::TRACK as $i => $s) {
+                $steps[] = ['label' => BookingAdminService::statusLabel($s), 'state' => $i < $at ? 'done' : ($i === $at ? 'current' : 'todo')];
+            }
+        }
+
+        $due = in_array($status, ['confirmed', 'delivered', 'return_pending'], true) ? $booking['end_date'] : null;
+        $overdueDays = 0;
+        if ($due !== null && in_array($status, ['delivered', 'return_pending'], true)) {
+            $overdueDays = self::lateDays($booking['end_date'], $today);
+        }
+        $rate = self::cents(setting('late_fee_per_day', '500'));
+
+        $return = null;
+        $ret = self::forBooking((int) $booking['booking_id']);
+        if ($ret !== null) {
+            $lines = [];
+            foreach ($ret['lines'] as $l) {
+                $lines[] = [
+                    'name' => $l['name'], 'sku' => $l['sku'], 'booked' => (int) $l['quantity'], 'returned' => (int) $l['qty_returned'],
+                    'damaged' => (int) $l['qty_damaged'], 'missing' => (int) $l['qty_missing'], 'charge' => (float) $l['damage_charge'],
+                ];
+            }
+            $return = [
+                'returned_at' => $ret['returned_at'], 'late_days' => (int) $ret['late_days'], 'late_fee' => (float) $ret['late_fee'],
+                'damage_total' => (float) $ret['damage_total'], 'charges_total' => (float) $ret['charges_total'], 'lines' => $lines,
+            ];
+        }
+
+        return [
+            'steps' => $steps, 'due_back' => $due, 'overdue_days' => $overdueDays,
+            'overdue_fee' => ($overdueDays * $rate) / 100.0, 'late_rate' => $rate / 100.0, 'return' => $return,
+        ];
     }
 
     /**

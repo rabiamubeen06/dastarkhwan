@@ -89,11 +89,11 @@ final class PaymentService
 
     /**
      * What the customer should pay next (shown on their booking page, C-13).
-     * The advance comes first; once it is paid, the remaining balance.
+     * The advance comes first; once it is paid, the remaining balance; then any extra charges after the return.
      * @param array $summary result of summary()
      * @return array{label:string,amount:float} amount is 0 when nothing is due
      */
-    public static function dueNow(array $summary, string $status): array
+    public static function dueNow(array $summary, string $status, float $extraDue = 0.0): array
     {
         if (in_array($status, ['rejected', 'cancelled'], true)) {
             return ['label' => '', 'amount' => 0.0];
@@ -105,6 +105,9 @@ final class PaymentService
         if ($summary['balance_due'] > 0) {
             return ['label' => 'Balance due', 'amount' => (float) $summary['balance_due']];
         }
+        if ($extraDue > 0) {
+            return ['label' => 'Extra charges due', 'amount' => round($extraDue, 2)];
+        }
         return ['label' => '', 'amount' => 0.0];
     }
 
@@ -115,12 +118,13 @@ final class PaymentService
     public static function customerView(array $booking): array
     {
         $summary = self::summary($booking);
-        $due = self::dueNow($summary, $booking['status']);
+        $dep = DepositService::view($booking);
+        $due = self::dueNow($summary, $booking['status'], $dep['extra_due']);
         $shop = trim(setting('shop_whatsapp', ''));
         $text = 'Hello, I am sending payment proof for booking ' . $booking['booking_no']
               . ($due['amount'] > 0 ? ' (' . money($due['amount']) . ').' : '.');
         return [
-            'summary' => $summary, 'due' => $due,
+            'summary' => $summary, 'due' => $due, 'deposit' => $dep,
             'instructions' => trim(setting('payment_instructions', '')),
             'shop_whatsapp' => $shop, 'proof_link' => whatsapp_link($shop, $text),
         ];
