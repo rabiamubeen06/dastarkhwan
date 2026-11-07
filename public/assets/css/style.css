@@ -287,3 +287,18 @@ input.qty.remarks{width:100%;min-width:140px}
 .cal-key{display:inline-block;width:10px;height:10px;margin:0 4px 0 12px;border:1px solid var(--line);border-radius:2px;vertical-align:middle}
 .cal-key.low{background:var(--warn-bg)}
 .cal-key.zero{background:var(--bad-bg)}
+
+/* Admin dashboard */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;margin-bottom:28px}
+.stat{display:block;padding:18px 20px;background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);text-decoration:none;color:var(--ink)}
+.stat:hover{border-color:var(--secondary)}
+.stat-n{display:block;font-family:var(--serif);font-size:2rem;line-height:1.1;font-weight:600}
+.stat-l{display:block;margin-top:4px;color:var(--mute);font-size:14px}
+.stat.attn .stat-n{color:var(--primary)}
+.dash{display:grid;grid-template-columns:3fr 2fr;gap:28px;align-items:start}
+.dash-main,.dash-side{display:grid;gap:28px}
+.dlist{list-style:none;margin:14px 0 0;padding:0}
+.dlist li{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:12px 0;border-top:1px solid var(--line)}
+.dlist li:first-child{border-top:0}
+.dash-empty{margin-top:14px!important;color:var(--mute)}
+@media (max-width:860px){.dash{grid-template-columns:1fr}}
