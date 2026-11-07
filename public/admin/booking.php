@@ -7,6 +7,7 @@ $id  = (int) (is_string($_GET['id'] ?? null) ? $_GET['id'] : $str('booking_id'))
 $errors = [];
 $conflicts = [];
 $payErrors = [];
+$settleErrors = [];
 $open = '';   // which action form to keep open after a failed submit
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -41,6 +42,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $payErrors = $pr['errors'];
         $open = 'payment';
     }
+    if ($action === 'settle') {
+        $sr = DepositService::settle($id, $admin['id'], $_POST);
+        if ($sr['ok']) {
+            flash('success', 'Deposit settled: ' . money($sr['deducted']) . ' deducted, ' . money($sr['refund']) . ' refunded.'
+                . ($sr['extra_owed'] > 0 ? ' The customer still owes ' . money($sr['extra_owed']) . ' in extra charges.' : '')
+                . (!empty($sr['completed']) ? ' The booking is now completed.' : ''));
+            redirect('admin/booking.php?id=' . $id);
+        }
+        $settleErrors = $sr['errors'];
+        $open = 'settle';
+    }
     if ($res !== null) {
         if ($res['ok']) {
             flash('success', $ok);
@@ -66,6 +78,9 @@ $canReceive = in_array($b['status'], ReturnService::RECEIVABLE, true);
 $return    = ReturnService::forBooking($id);
 $avail     = $pending ? BookingAdminService::itemAvailability($b) : [];
 $pay       = PaymentService::summary($b);
+$showDeposit = in_array($b['status'], ['confirmed', 'delivered', 'return_pending', 'returned', 'completed'], true);
+$dep       = $showDeposit ? DepositService::view($b) : null;
+$sv        = fn(string $k): string => e($open === 'settle' ? trim($str($k)) : '');
 $payments  = PaymentService::forBooking($id);
 $payTypes  = PaymentService::allowedTypes($b['status']);
 $pv        = fn(string $k): string => e($open === 'payment' ? trim($str($k)) : '');
@@ -191,6 +206,69 @@ require APP_PATH . '/views/header.php';
       </dl>
     </section>
 
+    <?php if ($dep): ?>
+      <section class="panel mt">
+        <h2>Security deposit</h2>
+        <p class="muted small-text">Held separately. It is not rental income.</p>
+        <dl class="quote">
+          <div><dt>Required</dt><dd><?= e(money($dep['required'])) ?></dd></div>
+          <div><dt>Held</dt><dd><?= e(money($dep['held'])) ?></dd></div>
+          <?php if ($dep['has_return']): ?>
+            <div><dt>Return charges</dt><dd><?= e(money($dep['charges'])) ?></dd></div>
+            <div><dt><?= $dep['settled'] ? 'Deducted' : 'To deduct' ?></dt><dd><?= e(money($dep['deduct'])) ?></dd></div>
+            <div><dt><?= $dep['settled'] ? 'Refunded' : 'To refund' ?></dt><dd><?= e(money($dep['refund'])) ?></dd></div>
+            <?php if ($dep['extra_owed'] > 0): ?>
+              <div class="after"><dt>Extra owed by customer</dt><dd><?= e(money($dep['extra_owed'])) ?></dd></div>
+              <div class="after"><dt>Extra paid</dt><dd><?= e(money($dep['extra_paid'])) ?></dd></div>
+            <?php endif; ?>
+          <?php endif; ?>
+          <div class="after"><dt>Status</dt><dd><span class="pill <?= $dep['settled'] ? 'ok' : 'off' ?>"><?= e($dep['status_label']) ?></span></dd></div>
+        </dl>
+        <?php if ($dep['settled'] && $dep['extra_due'] > 0): ?>
+          <div class="alert warning mt">The customer still owes <?= e(money($dep['extra_due'])) ?>. Record it above as a damage charge or late fee payment.</div>
+        <?php endif; ?>
+
+        <?php if ($dep['can_settle']): ?>
+          <h2 class="mt">Settle deposit</h2>
+          <p class="muted small-text">
+            <?= e(money($dep['deduct'])) ?> is deducted for the return charges<?= $dep['refund'] > 0 ? ' and ' . e(money($dep['refund'])) . ' is refunded to the customer' : '' ?>.
+            <?= $dep['extra_owed'] > 0 ? 'The charges are higher than the deposit, so ' . e(money($dep['extra_owed'])) . ' stays owed. ' : '' ?>
+            This can only be done once.
+          </p>
+          <?php if (isset($settleErrors['form'])): ?><div class="alert error"><?= e($settleErrors['form']) ?></div><?php endif; ?>
+          <form method="post" novalidate>
+            <?= Csrf::field() ?>
+            <input type="hidden" name="action" value="settle">
+            <input type="hidden" name="booking_id" value="<?= (int) $b['booking_id'] ?>">
+            <?php if ($dep['refund'] > 0): ?>
+              <label>Refund method
+                <select name="method">
+                  <?php foreach (PaymentService::METHODS as $k => $label): ?>
+                    <option value="<?= e($k) ?>" <?= $sv('method') === $k ? 'selected' : '' ?>><?= e($label) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </label><?= field_error($settleErrors, 'method') ?>
+              <label>Reference (optional)
+                <input type="text" name="reference_no" maxlength="80" value="<?= $sv('reference_no') ?>">
+              </label><?= field_error($settleErrors, 'reference_no') ?>
+              <label>Refunded on
+                <input type="datetime-local" name="paid_at" max="<?= e($nowLocal) ?>" value="<?= $open === 'settle' ? $sv('paid_at') : e($nowLocal) ?>">
+              </label><?= field_error($settleErrors, 'paid_at') ?>
+              <label>Note (optional)
+                <input type="text" name="notes" maxlength="255" value="<?= $sv('notes') ?>">
+              </label><?= field_error($settleErrors, 'notes') ?>
+              <?= field_error($settleErrors, 'amount') ?><?= field_error($settleErrors, 'type') ?>
+            <?php endif; ?>
+            <div class="cart-actions mt"><button class="btn" type="submit">Settle deposit</button></div>
+          </form>
+        <?php elseif (!$dep['settled'] && $b['status'] === 'returned' && !$dep['has_return']): ?>
+          <p class="muted small-text">Record the return first.</p>
+        <?php elseif (!$dep['settled'] && in_array($b['status'], ['confirmed', 'delivered', 'return_pending'], true)): ?>
+          <p class="muted small-text">The deposit is settled after the items are received back.</p>
+        <?php endif; ?>
+      </section>
+    <?php endif; ?>
+
     <?php if ($payTypes): ?>
       <section class="panel mt">
         <h2>Record payment</h2>
@@ -202,14 +280,14 @@ require APP_PATH . '/views/header.php';
           <label>Type
             <select name="type">
               <?php foreach ($payTypes as $t): ?>
-                <option value="<?= e($t) ?>" <?= $pv('type') === $t ? 'selected' : '' ?>><?= e(PaymentService::TYPES[$t]) ?></option>
+                <option value="<?= e($t) ?>" <?= $pv('type') === $t ? 'selected' : '' ?>><?= e(PaymentService::typeLabel($t)) ?></option>
               <?php endforeach; ?>
             </select>
           </label><?= field_error($payErrors, 'type') ?>
           <label>Amount (PKR)
             <input type="text" name="amount" inputmode="decimal" maxlength="13" value="<?= $pv('amount') ?>" required>
           </label><?= field_error($payErrors, 'amount') ?>
-          <p class="hint">Advance still needed: <?= e(money(max(0, $pay['advance_required'] - $pay['advance_paid']))) ?> &middot; Balance due: <?= e(money($pay['balance_due'])) ?><?= $pay['refundable_left'] > 0 ? ' &middot; Refundable: ' . e(money($pay['refundable_left'])) : '' ?></p>
+          <p class="hint">Advance still needed: <?= e(money(max(0, $pay['advance_required'] - $pay['advance_paid']))) ?> &middot; Balance due: <?= e(money($pay['balance_due'])) ?><?= $pay['refundable_left'] > 0 ? ' &middot; Refundable: ' . e(money($pay['refundable_left'])) : '' ?><?= $dep && $dep['extra_due'] > 0 ? ' &middot; Extra charges due: ' . e(money($dep['extra_due'])) : '' ?></p>
           <label>Method
             <select name="method">
               <?php foreach (PaymentService::METHODS as $k => $label): ?>

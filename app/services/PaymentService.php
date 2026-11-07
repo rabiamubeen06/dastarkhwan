@@ -8,10 +8,12 @@ declare(strict_types=1);
  */
 final class PaymentService
 {
-    /** Types the admin can record here. damage_charge and late_fee are added by the return feature (A-07). */
+    /** Types the admin can always record. damage_charge and late_fee only apply after a return (see allowedTypes). */
     public const TYPES = ['advance' => 'Advance', 'balance' => 'Balance', 'deposit' => 'Security deposit', 'refund' => 'Refund'];
     public const METHODS = ['cash' => 'Cash', 'bank_transfer' => 'Bank transfer', 'easypaisa' => 'Easypaisa', 'jazzcash' => 'JazzCash', 'other' => 'Other'];
     private const ALL_LABELS = ['damage_charge' => 'Damage charge', 'late_fee' => 'Late fee'];
+    /** Extra charges above the security deposit, collected from the customer after the return (A-06). */
+    public const CHARGE_TYPES = ['damage_charge', 'late_fee'];
 
     public static function typeLabel(string $type): string
     {
@@ -25,6 +27,7 @@ final class PaymentService
             'pending'   => ['advance'],
             'cancelled' => ['refund'],
             'rejected'  => [],
+            'returned', 'completed' => array_merge(array_keys(self::TYPES), self::CHARGE_TYPES),
             default     => array_keys(self::TYPES),
         };
     }
@@ -135,11 +138,11 @@ final class PaymentService
 
         $type = $get('type');
         $allowed = self::allowedTypes($booking['status']);
-        if (!isset(self::TYPES[$type])) {
+        if (!isset(self::TYPES[$type]) && !in_array($type, self::CHARGE_TYPES, true)) {
             $errors['type'] = 'Choose the payment type.';
         } elseif (!in_array($type, $allowed, true)) {
             $errors['type'] = $allowed
-                ? 'A ' . BookingAdminService::statusLabel($booking['status']) . ' booking can only take: ' . implode(', ', array_map(fn($t) => strtolower(self::TYPES[$t]), $allowed)) . '.'
+                ? 'A ' . BookingAdminService::statusLabel($booking['status']) . ' booking can only take: ' . implode(', ', array_map(fn($t) => strtolower(self::typeLabel($t)), $allowed)) . '.'
                 : 'No payments can be recorded on a ' . strtolower(BookingAdminService::statusLabel($booking['status'])) . ' booking.';
         }
 
@@ -158,8 +161,17 @@ final class PaymentService
                 $due = self::cents($s['balance_due']);
                 if (($type === 'advance' || $type === 'balance') && $cents > $due) {
                     $errors['amount'] = 'This is more than the balance due (' . money($s['balance_due']) . ').';
+                } elseif ($type === 'deposit' && DepositService::view($booking)['settled']) {
+                    $errors['type'] = 'The security deposit has already been settled, so no more can be received.';
                 } elseif ($type === 'deposit' && $cents > self::cents($s['deposit_required'] - $s['deposit_received'])) {
                     $errors['amount'] = 'This is more than the security deposit still due (' . money(max(0, $s['deposit_required'] - $s['deposit_received'])) . ').';
+                } elseif (in_array($type, self::CHARGE_TYPES, true)) {
+                    $extra = DepositService::view($booking)['extra_due'];
+                    if ($extra <= 0) {
+                        $errors['type'] = 'There are no extra charges to collect on this booking.';
+                    } elseif ($cents > self::cents($extra)) {
+                        $errors['amount'] = 'This is more than the extra charges still due (' . money($extra) . ').';
+                    }
                 } elseif ($type === 'refund' && $cents > self::cents($s['refundable_left'])) {
                     $errors['amount'] = 'You can refund at most ' . money($s['refundable_left']) . ' (what was received minus earlier refunds).';
                 }
@@ -226,10 +238,12 @@ final class PaymentService
             ]);
             $id = (int) $pdo->lastInsertId();
             if ($c['type'] === 'deposit') {
-                // The deposit is held separately and is not revenue. A-06 settles it later.
+                // The deposit is held separately and is not revenue. It is settled after the return (DepositService).
                 $pdo->prepare("UPDATE security_deposits SET amount_held = amount_held + ?, status = 'held' WHERE booking_id = ? AND status IN ('pending','held')")
                     ->execute([$c['amount'], $bookingId]);
             }
+            // A payment can be the last thing a returned booking was waiting for.
+            DepositService::completeIfSettled($bookingId, $adminId);
             $pdo->commit();
             return ['ok' => true, 'errors' => [], 'id' => $id];
         } catch (Throwable $e) {
