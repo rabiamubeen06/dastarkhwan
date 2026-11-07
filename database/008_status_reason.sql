@@ -1,0 +1,1 @@
+ALTER TABLE bookings ADD COLUMN status_reason VARCHAR(500) NULL AFTER admin_notes;

@@ -12,6 +12,7 @@ $onCategories = str_contains($script, '/admin/categories');
 $onZones = str_contains($script, '/admin/delivery-zones');
 $onSettings = str_contains($script, '/admin/settings');
 $onBookings = str_contains($script, '/admin/booking');
+$onMyBookings = str_contains($script, '/customer/booking') || str_contains($script, '/customer/invoice') || str_ends_with($script, 'booking-confirmation.php');
 $pendingCount = $isAdmin ? BookingAdminService::pendingCount() : 0;
 ?>
 <!DOCTYPE html>
@@ -44,6 +45,7 @@ $pendingCount = $isAdmin ? BookingAdminService::pendingCount() : 0;
       <a href="<?= e(url('admin/delivery-zones.php')) ?>" class="<?= $onZones ? 'active' : '' ?>">Delivery</a>
       <a href="<?= e(url('admin/settings.php')) ?>" class="<?= $onSettings ? 'active' : '' ?>">Settings</a>
     <?php else: ?>
+      <?php if ($u): ?><a href="<?= e(url('customer/bookings.php')) ?>" class="<?= $onMyBookings ? 'active' : '' ?>">Bookings</a><?php endif; ?>
       <a href="<?= e(url('cart.php')) ?>" class="<?= $onCart ? 'active' : '' ?>">Cart<?php if ($cartCount > 0): ?> <span class="badge"><?= $cartCount ?></span><?php endif; ?></a>
     <?php endif; ?>
     <?php if ($u): ?>

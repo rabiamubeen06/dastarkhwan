@@ -12,10 +12,7 @@ if ($b === null) {
 $advance  = round((float) $b['total_amount'] * (float) setting('advance_percent', '30') / 100, 2);
 $shopWa   = trim(setting('shop_whatsapp', ''));
 $waLink   = whatsapp_link($shopWa, 'Hello, my booking number is ' . $b['booking_no'] . '.');
-$pay      = PaymentService::summary($b);
-$due      = PaymentService::dueNow($pay, $b['status']);
-$instructions = trim(setting('payment_instructions', ''));
-$proofLink = whatsapp_link($shopWa, 'Hello, I am sending payment proof for booking ' . $b['booking_no'] . ($due['amount'] > 0 ? ' (' . money($due['amount']) . ').' : '.'));
+$pv       = PaymentService::customerView($b);
 $fmtDate  = fn(string $d): string => date('j M Y', strtotime($d));
 
 $pageTitle = 'Booking ' . $b['booking_no'];
@@ -74,25 +71,7 @@ require APP_PATH . '/views/header.php';
       <div class="after"><dt>Refundable security deposit</dt><dd><?= e(money($b['security_deposit'])) ?></dd></div>
     </dl>
 
-    <?php if ($due['amount'] > 0): ?>
-      <h2 class="mt">Payment</h2>
-      <dl class="quote">
-        <div class="total"><dt><?= e($due['label']) ?></dt><dd><?= e(money($due['amount'])) ?></dd></div>
-      </dl>
-      <p class="muted small-text">
-        <?= $b['status'] === 'pending'
-            ? 'Pay only after the shop approves your request. Your items are locked once the advance is received.'
-            : 'Send the payment using the details below, then share the proof with the shop.' ?>
-      </p>
-      <?php if ($instructions !== ''): ?>
-        <div class="instructions"><?= e($instructions) ?></div>
-      <?php else: ?>
-        <p class="muted small-text">The shop will share its payment details with you directly.</p>
-      <?php endif; ?>
-      <?php if ($proofLink !== ''): ?>
-        <a class="btn block mt" href="<?= e($proofLink) ?>" target="_blank" rel="noopener">Send payment proof on WhatsApp</a>
-      <?php endif; ?>
-    <?php endif; ?>
+    <?php require APP_PATH . '/views/payment-panel.php'; ?>
 
     <h2 class="mt">What happens next</h2>
     <ol class="next-steps">
@@ -109,5 +88,8 @@ require APP_PATH . '/views/header.php';
     <?php endif; ?>
   </section>
 </div>
-<p class="mt"><a class="btn ghost" href="<?= e(url('customer/dashboard.php')) ?>">Go to my dashboard</a></p>
+<p class="mt">
+  <a class="btn" href="<?= e(url('customer/booking.php?no=' . rawurlencode($b['booking_no']))) ?>">View booking details</a>
+  <a class="btn ghost" href="<?= e(url('customer/dashboard.php')) ?>">Go to my dashboard</a>
+</p>
 <?php require APP_PATH . '/views/footer.php'; ?>

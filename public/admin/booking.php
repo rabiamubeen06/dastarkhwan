@@ -231,7 +231,7 @@ require APP_PATH . '/views/header.php';
           <?= Csrf::field() ?>
           <input type="hidden" name="action" value="reject">
           <input type="hidden" name="booking_id" value="<?= (int) $b['booking_id'] ?>">
-          <label>Reason
+          <label>Reason (the customer will see this)
             <textarea name="note" rows="2" maxlength="500" required><?= $noteVal('reject') ?></textarea>
           </label>
           <div class="cart-actions mt"><button class="btn ghost" type="submit">Reject request</button></div>
@@ -247,7 +247,7 @@ require APP_PATH . '/views/header.php';
           <?= Csrf::field() ?>
           <input type="hidden" name="action" value="cancel">
           <input type="hidden" name="booking_id" value="<?= (int) $b['booking_id'] ?>">
-          <label>Reason
+          <label>Reason (the customer will see this)
             <textarea name="note" rows="2" maxlength="500" required><?= $noteVal('cancel') ?></textarea>
           </label>
           <div class="cart-actions mt"><button class="btn ghost" type="submit">Cancel booking</button></div>

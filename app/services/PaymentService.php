@@ -106,6 +106,24 @@ final class PaymentService
     }
 
     /**
+     * Everything the customer's booking pages need about money: amounts, what is due, instructions, WhatsApp link.
+     * $booking is a row from BookingService::find().
+     */
+    public static function customerView(array $booking): array
+    {
+        $summary = self::summary($booking);
+        $due = self::dueNow($summary, $booking['status']);
+        $shop = trim(setting('shop_whatsapp', ''));
+        $text = 'Hello, I am sending payment proof for booking ' . $booking['booking_no']
+              . ($due['amount'] > 0 ? ' (' . money($due['amount']) . ').' : '.');
+        return [
+            'summary' => $summary, 'due' => $due,
+            'instructions' => trim(setting('payment_instructions', '')),
+            'shop_whatsapp' => $shop, 'proof_link' => whatsapp_link($shop, $text),
+        ];
+    }
+
+    /**
      * Check the payment form for this booking.
      * @return array{0:array<string,string>,1:array<string,mixed>} [errors, clean values]
      */

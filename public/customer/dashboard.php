@@ -29,15 +29,18 @@ require APP_PATH . '/views/header.php';
     <tbody>
       <?php foreach ($bookings as $b): ?>
         <tr>
-          <td data-label="Booking"><a href="<?= e(url('booking-confirmation.php?no=' . rawurlencode($b['booking_no']))) ?>"><strong><?= e($b['booking_no']) ?></strong></a></td>
+          <td data-label="Booking"><a href="<?= e(url('customer/booking.php?no=' . rawurlencode($b['booking_no']))) ?>"><strong><?= e($b['booking_no']) ?></strong></a></td>
           <td data-label="Dates"><?= e(date('j M', strtotime($b['start_date']))) ?> to <?= e(date('j M Y', strtotime($b['end_date']))) ?></td>
-          <td data-label="Status"><span class="status"><?= e(ucfirst(str_replace('_', ' ', $b['status']))) ?></span></td>
+          <td data-label="Status"><span class="status <?= e(BookingAdminService::statusClass($b['status'])) ?>"><?= e(BookingAdminService::statusLabel($b['status'])) ?></span></td>
           <td data-label="Total" class="num"><?= e(money($b['total_amount'])) ?></td>
         </tr>
       <?php endforeach; ?>
     </tbody>
   </table>
 </div>
-<p class="mt"><a class="btn" href="<?= e(url('catalog.php')) ?>">Browse catalog</a></p>
+<p class="mt">
+  <a class="btn" href="<?= e(url('catalog.php')) ?>">Browse catalog</a>
+  <a class="btn ghost" href="<?= e(url('customer/bookings.php')) ?>">All my bookings</a>
+</p>
 <?php endif; ?>
 <?php require APP_PATH . '/views/footer.php'; ?>

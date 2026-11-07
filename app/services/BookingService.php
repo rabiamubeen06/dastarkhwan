@@ -123,6 +123,33 @@ final class BookingService
         return ['ok' => true, 'booking_no' => $no];
     }
 
+    public const HISTORY_PER_PAGE = 10;
+
+    /** The customer may open an invoice once the booking is confirmed (not for pending, rejected or cancelled). */
+    public static function invoiceAvailable(string $status): bool
+    {
+        return in_array($status, ['confirmed', 'delivered', 'return_pending', 'returned', 'completed'], true);
+    }
+
+    /** @return array{rows:array,total:int,page:int,pages:int} this customer's bookings, newest first */
+    public static function history(int $userId, int $page): array
+    {
+        $pdo = Database::pdo();
+        $st = $pdo->prepare('SELECT COUNT(*) FROM bookings WHERE user_id = ?');
+        $st->execute([$userId]);
+        $total  = (int) $st->fetchColumn();
+        $pages  = max(1, (int) ceil($total / self::HISTORY_PER_PAGE));
+        $page   = max(1, min($page, $pages));
+        $limit  = self::HISTORY_PER_PAGE;
+        $offset = ($page - 1) * $limit;   // integers only, safe to inline
+        $st = $pdo->prepare(
+            "SELECT booking_no, event_type, start_date, end_date, total_amount, status, created_at
+             FROM bookings WHERE user_id = ? ORDER BY booking_id DESC LIMIT $limit OFFSET $offset"
+        );
+        $st->execute([$userId]);
+        return ['rows' => $st->fetchAll(), 'total' => $total, 'page' => $page, 'pages' => $pages];
+    }
+
     /** One of this customer's bookings, with its items. Null if it does not exist or belongs to someone else. */
     public static function find(string $bookingNo, int $userId): ?array
     {

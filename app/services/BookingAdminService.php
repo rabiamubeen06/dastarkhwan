@@ -275,8 +275,9 @@ final class BookingAdminService
             $nonRefundable = $to === 'cancelled' && $b['status'] === 'confirmed' && self::advanceNonRefundable($b['start_date']);
             $line = $label . ($nonRefundable ? ' within ' . self::NON_REFUNDABLE_DAYS . ' days of the event: advance is NON-REFUNDABLE' : '');
 
-            $pdo->prepare('UPDATE bookings SET status = ?, admin_notes = ? WHERE booking_id = ? AND status = ?')
-                ->execute([$to, self::appendNote($id, $adminId, $line, $note), $id, $b['status']]);
+            // The reason is also saved on its own so the customer can see it (admin_notes stays internal).
+            $pdo->prepare('UPDATE bookings SET status = ?, status_reason = ?, admin_notes = ? WHERE booking_id = ? AND status = ?')
+                ->execute([$to, $note, self::appendNote($id, $adminId, $line, $note), $id, $b['status']]);
             $pdo->commit();
             return ['ok' => true, 'non_refundable' => $nonRefundable];
         } catch (Throwable $e) {
