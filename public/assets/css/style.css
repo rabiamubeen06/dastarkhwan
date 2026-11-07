@@ -302,3 +302,7 @@ input.qty.remarks{width:100%;min-width:140px}
 .dlist li:first-child{border-top:0}
 .dash-empty{margin-top:14px!important;color:var(--mute)}
 @media (max-width:860px){.dash{grid-template-columns:1fr}}
+
+/* Let the top bar wrap when the admin menu is wider than the screen */
+.top-in{height:auto;min-height:64px;flex-wrap:wrap;padding-top:8px;padding-bottom:8px}
+.top nav{flex-wrap:wrap}

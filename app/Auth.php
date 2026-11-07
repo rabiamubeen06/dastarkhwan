@@ -92,7 +92,7 @@ final class Auth
         return self::insertUser($in, 'customer');
     }
 
-    /** Used only by scripts/create_admin.php (command line). */
+    /** Used by scripts/create_admin.php (command line) and the admin accounts page. */
     public static function createAdmin(array $in): array
     {
         return self::insertUser($in, 'admin');

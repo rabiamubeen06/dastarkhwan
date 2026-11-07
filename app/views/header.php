@@ -12,6 +12,7 @@ $onCategories = str_contains($script, '/admin/categories');
 $onPackages = str_ends_with($script, '/packages.php') && !str_contains($script, '/admin/');
 $onAdminPackages = str_contains($script, '/admin/package');
 $onInventory = str_contains($script, '/admin/inventory');
+$onCustomers = str_contains($script, '/admin/customer') || str_contains($script, '/admin/admins');
 $onZones = str_contains($script, '/admin/delivery-zones');
 $onSettings = str_contains($script, '/admin/settings');
 $onBookings = str_contains($script, '/admin/booking');
@@ -48,6 +49,7 @@ $pendingCount = $isAdmin ? BookingAdminService::pendingCount() : 0;
       <a href="<?= e(url('admin/packages.php')) ?>" class="<?= $onAdminPackages ? 'active' : '' ?>">Packages</a>
       <a href="<?= e(url('admin/categories.php')) ?>" class="<?= $onCategories ? 'active' : '' ?>">Categories</a>
       <a href="<?= e(url('admin/delivery-zones.php')) ?>" class="<?= $onZones ? 'active' : '' ?>">Delivery</a>
+      <a href="<?= e(url('admin/customers.php')) ?>" class="<?= $onCustomers ? 'active' : '' ?>">Customers</a>
       <a href="<?= e(url('admin/settings.php')) ?>" class="<?= $onSettings ? 'active' : '' ?>">Settings</a>
     <?php else: ?>
       <a href="<?= e(url('packages.php')) ?>" class="<?= $onPackages ? 'active' : '' ?>">Packages</a>
