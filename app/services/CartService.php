@@ -10,7 +10,7 @@ final class CartService
 {
     private static function cart(): array
     {
-        return ($_SESSION['cart'] ?? []) + ['start' => '', 'end' => '', 'items' => [], 'method' => 'pickup', 'zone' => 0];
+        return ($_SESSION['cart'] ?? []) + ['start' => '', 'end' => '', 'items' => [], 'method' => 'pickup', 'zone' => 0, 'package' => 0];
     }
 
     /** @return array{method:string,zone:int} 'pickup' or 'delivery', and the chosen delivery zone id (0 = none) */
@@ -57,7 +57,75 @@ final class CartService
 
     public static function clear(): void
     {
-        $_SESSION['cart'] = ['start' => '', 'end' => '', 'items' => [], 'method' => 'pickup', 'zone' => 0];
+        $_SESSION['cart'] = ['start' => '', 'end' => '', 'items' => [], 'method' => 'pickup', 'zone' => 0, 'package' => 0];
+    }
+
+    /**
+     * The package applied to this cart (a template, or one of this customer's own), or null.
+     * Read from the database every time, so a deleted package or a changed discount takes effect at once.
+     */
+    public static function package(): ?array
+    {
+        $id = (int) self::cart()['package'];
+        return $id > 0 ? PackageService::find($id, (int) (Auth::user()['id'] ?? 0)) : null;
+    }
+
+    /** Discount percent of the applied package (0 when there is none). */
+    public static function discountPercent(): float
+    {
+        return (float) (self::package()['discount_percent'] ?? 0);
+    }
+
+    /** Keep the items but drop the package, and with it the discount. */
+    public static function removePackage(): void
+    {
+        $c = self::cart();
+        $c['package'] = 0;
+        $_SESSION['cart'] = $c;
+    }
+
+    /**
+     * Replace the cart items with a package's items, limited to what is available for the cart dates.
+     * @return array{0:?string,1:string[]} [error or null, notices for the customer]
+     */
+    public static function applyPackage(int $packageId): array
+    {
+        $dates = self::dates();
+        if ($dates === null) {
+            return ['Choose your event dates first.', []];
+        }
+        $pkg = PackageService::find($packageId, (int) (Auth::user()['id'] ?? 0));
+        if ($pkg === null) {
+            return ['That package was not found.', []];
+        }
+        $ids      = array_keys($pkg['qty']);
+        $avail    = AvailabilityService::forProducts($ids, $dates['start'], $dates['end']);
+        $products = self::products($ids);
+        $new = [];
+        $notes = [];
+        foreach ($pkg['qty'] as $id => $want) {
+            $name = $products[$id]['name'] ?? 'An item';
+            $min  = max(1, (int) ($products[$id]['min_order_qty'] ?? 1));
+            $a    = $avail[$id] ?? 0;
+            if (!isset($products[$id]) || $a < $min) {
+                $notes[] = $name . ' is not available for these dates and was left out.';
+                continue;
+            }
+            $qty = max($want, $min);
+            if ($qty > $a) {
+                $qty = $a;
+                $notes[] = $name . ' was reduced to ' . $a . ' (all that is available).';
+            }
+            $new[$id] = $qty;
+        }
+        if (!$new) {
+            return ['None of the items in this package are available for your dates.', $notes];
+        }
+        $c = self::cart();
+        $c['items']   = $new;
+        $c['package'] = $packageId;
+        $_SESSION['cart'] = $c;
+        return [null, $notes];
     }
 
     public static function remove(int $productId): void
@@ -176,12 +244,14 @@ final class CartService
         $ids      = array_keys($c['items']);
         $avail    = AvailabilityService::forProducts($ids, $c['start'], $c['end']);
         $products = self::products($ids);
+        $covered  = self::package()['qty'] ?? [];   // product_id => quantity the package includes
         $lines = [];
         foreach ($c['items'] as $id => $qty) {
             if (!isset($products[$id])) {
                 continue;
             }
             $rent = (float) $products[$id]['rent_per_day'];
+            $cov  = min($qty, (int) ($covered[$id] ?? 0));
             $lines[] = [
                 'product_id'    => $id,
                 'name'          => $products[$id]['name'],
@@ -192,6 +262,8 @@ final class CartService
                 'quantity'      => $qty,
                 'available'     => $avail[$id] ?? 0,
                 'line_total'    => round($qty * $rent * $days, 2),   // quantity x rent per day x days
+                'package_qty'   => $cov,                              // units covered by the applied package
+                'discount_base' => round($cov * $rent * $days, 2),    // the part of the line the package discount applies to
             ];
         }
         return $lines;

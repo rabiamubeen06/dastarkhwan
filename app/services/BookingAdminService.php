@@ -87,8 +87,9 @@ final class BookingAdminService
         $pdo = Database::pdo();
         $st = $pdo->prepare(
             'SELECT b.*, u.full_name, u.email, u.phone, z.city AS zone_city, z.area AS zone_area,
-                    c.full_name AS confirmed_by_name
+                    c.full_name AS confirmed_by_name, pk.name AS package_name
              FROM bookings b
+             LEFT JOIN packages pk ON pk.package_id = b.package_id
              JOIN users u ON u.user_id = b.user_id
              LEFT JOIN users c ON c.user_id = b.confirmed_by
              LEFT JOIN delivery_zones z ON z.zone_id = b.delivery_zone_id

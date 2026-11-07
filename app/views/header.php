@@ -9,6 +9,8 @@ $cartCount = CartService::count();
 $isAdmin = ($u['role'] ?? '') === 'admin';
 $onProducts = str_contains($script, '/admin/product');
 $onCategories = str_contains($script, '/admin/categories');
+$onPackages = str_ends_with($script, '/packages.php') && !str_contains($script, '/admin/');
+$onAdminPackages = str_contains($script, '/admin/package');
 $onZones = str_contains($script, '/admin/delivery-zones');
 $onSettings = str_contains($script, '/admin/settings');
 $onBookings = str_contains($script, '/admin/booking');
@@ -41,10 +43,12 @@ $pendingCount = $isAdmin ? BookingAdminService::pendingCount() : 0;
     <?php if ($isAdmin): ?>
       <a href="<?= e(url('admin/bookings.php')) ?>" class="<?= $onBookings ? 'active' : '' ?>">Bookings<?php if ($pendingCount > 0): ?> <span class="badge"><?= $pendingCount ?></span><?php endif; ?></a>
       <a href="<?= e(url('admin/products.php')) ?>" class="<?= $onProducts ? 'active' : '' ?>">Products</a>
+      <a href="<?= e(url('admin/packages.php')) ?>" class="<?= $onAdminPackages ? 'active' : '' ?>">Packages</a>
       <a href="<?= e(url('admin/categories.php')) ?>" class="<?= $onCategories ? 'active' : '' ?>">Categories</a>
       <a href="<?= e(url('admin/delivery-zones.php')) ?>" class="<?= $onZones ? 'active' : '' ?>">Delivery</a>
       <a href="<?= e(url('admin/settings.php')) ?>" class="<?= $onSettings ? 'active' : '' ?>">Settings</a>
     <?php else: ?>
+      <a href="<?= e(url('packages.php')) ?>" class="<?= $onPackages ? 'active' : '' ?>">Packages</a>
       <?php if ($u): ?><a href="<?= e(url('customer/bookings.php')) ?>" class="<?= $onMyBookings ? 'active' : '' ?>">Bookings</a><?php endif; ?>
       <a href="<?= e(url('cart.php')) ?>" class="<?= $onCart ? 'active' : '' ?>">Cart<?php if ($cartCount > 0): ?> <span class="badge"><?= $cartCount ?></span><?php endif; ?></a>
     <?php endif; ?>

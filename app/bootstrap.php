@@ -8,6 +8,7 @@ require __DIR__ . '/Database.php';
 require __DIR__ . '/Csrf.php';
 require __DIR__ . '/Auth.php';
 require __DIR__ . '/services/AvailibilityService.php';
+require __DIR__ . '/services/PackageService.php';
 require __DIR__ . '/services/CartService.php';
 require __DIR__ . '/services/PricingService.php';
 require __DIR__ . '/services/BookingService.php';

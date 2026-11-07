@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $days  = AvailabilityService::rentalDays($dates['start'], $dates['end']);
-$quote = PricingService::quote($lines, $days, $delivery['method'], $delivery['zone']);
+$quote = PricingService::quote($lines, $days, $delivery['method'], $delivery['zone'], CartService::discountPercent());
 $fmt   = PricingService::format($quote);
 $st = Database::pdo()->prepare('SELECT phone FROM users WHERE user_id = ?');
 $st->execute([$user['id']]);

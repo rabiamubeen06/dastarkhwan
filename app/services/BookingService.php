@@ -76,22 +76,23 @@ final class BookingService
         }
         $days     = AvailabilityService::rentalDays($dates['start'], $dates['end']);
         $delivery = CartService::delivery();
-        $q        = PricingService::quote($lines, $days, $delivery['method'], $delivery['zone']);
+        $q        = PricingService::quote($lines, $days, $delivery['method'], $delivery['zone'], CartService::discountPercent());
         if ($q['error'] !== null) {
             return ['ok' => false, 'error' => $q['error'], 'notes' => []];
         }
 
+        $package = CartService::package();
         $pdo = Database::pdo();
         try {
             $pdo->beginTransaction();
             $pdo->prepare(
-                'INSERT INTO bookings (booking_no, user_id, event_type, event_name, guest_count, start_date, end_date,
+                'INSERT INTO bookings (booking_no, user_id, package_id, event_type, event_name, guest_count, start_date, end_date,
                     rental_days, delivery_method, delivery_address, delivery_zone_id, subtotal, discount, delivery_fee,
                     total_amount, security_deposit, customer_notes)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
             )->execute([
                 'T' . bin2hex(random_bytes(8)),   // temporary; replaced below once the id is known
-                $userId, $d['event_type'], $d['event_name'] !== '' ? $d['event_name'] : null, $d['guest_count'],
+                $userId, $package['package_id'] ?? null, $d['event_type'], $d['event_name'] !== '' ? $d['event_name'] : null, $d['guest_count'],
                 $dates['start'], $dates['end'], $days, $delivery['method'],
                 $d['delivery_address'] !== '' ? $d['delivery_address'] : null,
                 $delivery['method'] === 'delivery' ? $delivery['zone'] : null,
@@ -155,8 +156,9 @@ final class BookingService
     {
         $pdo = Database::pdo();
         $st = $pdo->prepare(
-            'SELECT b.*, z.city AS zone_city, z.area AS zone_area
+            'SELECT b.*, z.city AS zone_city, z.area AS zone_area, pk.name AS package_name
              FROM bookings b LEFT JOIN delivery_zones z ON z.zone_id = b.delivery_zone_id
+             LEFT JOIN packages pk ON pk.package_id = b.package_id
              WHERE b.booking_no = ? AND b.user_id = ?'
         );
         $st->execute([$bookingNo, $userId]);

@@ -4,6 +4,7 @@ declare(strict_types=1);
 /**
  * Cost calculator.
  *   subtotal = sum of line totals (quantity x rent per day x days)
+ *   discount = package discount percent of the package items' rent (extra items outside the package are not discounted)
  *   total    = subtotal - discount + delivery fee
  *   deposit  = deposit_percent of the replacement value, at least min_deposit (held separately, not revenue)
  *   advance  = advance_percent of the total
@@ -36,13 +37,15 @@ final class PricingService
     public static function quote(array $lines, int $days, string $method, int $zoneId, float $discountPercent = 0.0): array
     {
         $subtotal    = 0.0;
+        $eligible    = 0.0;   // the part of the subtotal the discount applies to
         $replacement = 0.0;
         foreach ($lines as $l) {
             $subtotal    += (float) $l['line_total'];
+            $eligible    += (float) ($l['discount_base'] ?? $l['line_total']);   // no 'discount_base' = whole line
             $replacement += (int) $l['quantity'] * (float) $l['replacement_cost'];
         }
         $subtotal = round($subtotal, 2);
-        $discount = round($subtotal * max(0.0, min(100.0, $discountPercent)) / 100, 2);
+        $discount = round(round($eligible, 2) * max(0.0, min(100.0, $discountPercent)) / 100, 2);
 
         $fee   = 0.0;
         $error = null;

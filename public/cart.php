@@ -20,7 +20,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect($back);
     }
 
-    if ($action === 'dates') {
+    if ($action === 'apply_package') {
+        // Posted from packages.php: the dates and the chosen package. Replaces the cart items with the package's items.
+        $back = CartService::setDates($str('start'), $str('end'));
+        [$err, $notes] = $back === null ? CartService::applyPackage((int) $str('package_id')) : [$back, []];
+        foreach ($notes as $note) {
+            flash('warning', $note);
+        }
+        if ($err !== null) {
+            flash('error', $err);
+            redirect('packages.php');
+        }
+        flash('success', 'Package added to your cart. You can change the quantities below.');
+        redirect('cart.php');
+    }
+
+    if ($action === 'remove_package') {
+        CartService::removePackage();
+        flash('success', 'Package removed. Your items are still in the cart.');
+    } elseif ($action === 'save_package') {
+        $user = Auth::user();
+        if (!$user || $user['role'] !== 'customer') {
+            $_SESSION['after_login'] = 'cart.php';
+            flash('warning', 'Log in or create an account to save packages. Your cart will be kept.');
+            redirect('login.php');
+        }
+        $res = PackageService::saveFromCart((int) $user['id'], $str('name'));
+        $res['error'] === null ? flash('success', 'Package saved. Find it on the Packages page.') : flash('error', $res['error']);
+    } elseif ($action === 'dates') {
         $err = CartService::setDates($str('start'), $str('end'));
         $err === null ? flash('success', 'Dates updated.') : flash('error', $err);
     } elseif ($action === 'delivery') {
@@ -54,7 +81,8 @@ $lines = CartService::lines();
 $days  = $dates ? AvailabilityService::rentalDays($dates['start'], $dates['end']) : 0;
 $delivery = CartService::delivery();
 $zones    = PricingService::zones();
-$quote    = PricingService::quote($lines, $days, $delivery['method'], $delivery['zone']);
+$package  = CartService::package();
+$quote    = PricingService::quote($lines, $days, $delivery['method'], $delivery['zone'], CartService::discountPercent());
 $fmt      = PricingService::format($quote);
 $catalogUrl = url('catalog.php') . ($dates ? '?' . http_build_query($dates) : '');
 
@@ -89,6 +117,24 @@ require APP_PATH . '/views/header.php';
     <p class="mt"><a class="btn" href="<?= e($catalogUrl) ?>">Browse catalog</a></p>
   </div>
 <?php else: ?>
+  <?php if ($package): ?>
+    <section class="panel pkg-bar">
+      <div>
+        <strong><?= e($package['name']) ?></strong>
+        <div class="muted small-text">
+          <?= (float) $package['discount_percent'] > 0
+              ? e(rtrim(rtrim(number_format((float) $package['discount_percent'], 2), '0'), '.')) . '% off the package items. Extra items are charged at the normal rate.'
+              : 'Your saved package.' ?>
+        </div>
+      </div>
+      <form method="post" class="inline">
+        <?= Csrf::field() ?>
+        <input type="hidden" name="action" value="remove_package">
+        <button class="linkbtn" type="submit">Remove package</button>
+      </form>
+    </section>
+  <?php endif; ?>
+
   <form method="post" id="cart-form">
     <?= Csrf::field() ?>
     <input type="hidden" name="action" value="update">
@@ -141,6 +187,15 @@ require APP_PATH . '/views/header.php';
       </form>
     </div>
   </div>
+
+  <form method="post" class="cart-dates mt">
+    <?= Csrf::field() ?>
+    <input type="hidden" name="action" value="save_package">
+    <label>Save this cart as a package
+      <input type="text" name="name" maxlength="120" placeholder="e.g. Sara's mehndi" required>
+    </label>
+    <button class="btn ghost" type="submit">Save package</button>
+  </form>
 
   <div class="cart-extra">
     <form method="post" id="delivery-form" class="cart-delivery" data-quote-url="<?= e(url('api/quote.php')) ?>">

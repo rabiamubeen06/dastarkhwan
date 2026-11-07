@@ -64,7 +64,7 @@ require APP_PATH . '/views/header.php';
     <h2>Amounts</h2>
     <dl class="quote">
       <div><dt>Rental subtotal</dt><dd><?= e(money($b['subtotal'])) ?></dd></div>
-      <div><dt>Package discount</dt><dd><?= e((float) $b['discount'] > 0 ? '- ' . money($b['discount']) : money(0)) ?></dd></div>
+      <div><dt>Package discount<?= !empty($b['package_name']) ? ' (' . e($b['package_name']) . ')' : '' ?></dt><dd><?= e((float) $b['discount'] > 0 ? '- ' . money($b['discount']) : money(0)) ?></dd></div>
       <div><dt>Delivery fee</dt><dd><?= e(money($b['delivery_fee'])) ?></dd></div>
       <div class="total"><dt>Total</dt><dd><?= e(money($b['total_amount'])) ?></dd></div>
       <div class="after"><dt>Advance to confirm</dt><dd><?= e(money($advance)) ?></dd></div>

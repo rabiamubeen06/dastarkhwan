@@ -29,5 +29,5 @@ if ($err !== null) {
 $dates = CartService::dates();
 $days  = $dates ? AvailabilityService::rentalDays($dates['start'], $dates['end']) : 0;
 $d     = CartService::delivery();
-$q     = PricingService::quote(CartService::lines(), $days, $d['method'], $d['zone']);
+$q     = PricingService::quote(CartService::lines(), $days, $d['method'], $d['zone'], CartService::discountPercent());
 echo json_encode(PricingService::format($q));
