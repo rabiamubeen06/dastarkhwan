@@ -6,6 +6,7 @@ $str = fn(string $k): string => is_string($_POST[$k] ?? null) ? $_POST[$k] : '';
 $id  = (int) (is_string($_GET['id'] ?? null) ? $_GET['id'] : $str('booking_id'));
 $errors = [];
 $conflicts = [];
+$payErrors = [];
 $open = '';   // which action form to keep open after a failed submit
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -14,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $note   = $str('note');
     $res = null;
     if ($action === 'confirm') {
-        $res = BookingAdminService::confirm($id, $admin['id'], $note, $str('advance_received') === '1');
+        $res = BookingAdminService::confirm($id, $admin['id'], $note);
         $ok = 'Booking confirmed. The items are now locked for these dates.';
     } elseif ($action === 'reject') {
         $res = BookingAdminService::reject($id, $admin['id'], $note);
@@ -24,6 +25,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ok = !empty($res['non_refundable'])
             ? 'Booking cancelled. The event is within ' . BookingAdminService::NON_REFUNDABLE_DAYS . ' days, so the advance is non-refundable.'
             : 'Booking cancelled.';
+    }
+    if ($action === 'payment') {
+        $pr = PaymentService::record($id, $admin['id'], $_POST);
+        if ($pr['ok']) {
+            flash('success', 'Payment recorded.');
+            redirect('admin/booking.php?id=' . $id);
+        }
+        $payErrors = $pr['errors'];
+        $open = 'payment';
     }
     if ($res !== null) {
         if ($res['ok']) {
@@ -45,7 +55,11 @@ if ($b === null) {
 $pending   = $b['status'] === 'pending';
 $canCancel = in_array($b['status'], ['pending', 'confirmed'], true);
 $avail     = $pending ? BookingAdminService::itemAvailability($b) : [];
-$advance   = BookingAdminService::advanceAmount($b);
+$pay       = PaymentService::summary($b);
+$payments  = PaymentService::forBooking($id);
+$payTypes  = PaymentService::allowedTypes($b['status']);
+$pv        = fn(string $k): string => e($open === 'payment' ? trim($str($k)) : '');
+$nowLocal  = date('Y-m-d\TH:i');
 $nonRef    = $b['status'] === 'confirmed' && BookingAdminService::advanceNonRefundable($b['start_date']);
 $fmt       = fn(string $d): string => date('j M Y', strtotime($d));
 $waDigits  = Auth::normalizePhone((string) preg_replace('/\D+/', '', (string) $b['phone'])) ?? '';
@@ -100,6 +114,28 @@ require APP_PATH . '/views/header.php';
         </tbody>
       </table>
     </div>
+
+    <h2 class="mt">Payments</h2>
+    <?php if (!$payments): ?>
+      <p class="muted small-text">No payments recorded yet.</p>
+    <?php else: ?>
+      <div class="cart-table-wrap">
+        <table class="cart-table">
+          <thead><tr><th>Date</th><th>Type</th><th>Method</th><th>Received by</th><th class="num">Amount</th></tr></thead>
+          <tbody>
+            <?php foreach ($payments as $p): ?>
+              <tr>
+                <td data-label="Date"><?= e(date('j M Y, g:i a', strtotime($p['paid_at']))) ?><?php if ($p['reference_no']): ?><div class="muted small-text">Ref: <?= e($p['reference_no']) ?></div><?php endif; ?></td>
+                <td data-label="Type"><?= e(PaymentService::typeLabel($p['type'])) ?><?php if ($p['notes']): ?><div class="muted small-text"><?= e($p['notes']) ?></div><?php endif; ?></td>
+                <td data-label="Method"><?= e(PaymentService::METHODS[$p['method']] ?? $p['method']) ?></td>
+                <td data-label="Received by"><?= e((string) ($p['received_by_name'] ?? '')) ?></td>
+                <td data-label="Amount" class="num"><?= $p['type'] === 'refund' ? '- ' : '' ?><?= e(money($p['amount'])) ?></td>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    <?php endif; ?>
   </div>
 
   <div>
@@ -110,10 +146,53 @@ require APP_PATH . '/views/header.php';
         <div><dt>Package discount</dt><dd><?= e((float) $b['discount'] > 0 ? '- ' . money($b['discount']) : money(0)) ?></dd></div>
         <div><dt>Delivery fee</dt><dd><?= e(money($b['delivery_fee'])) ?></dd></div>
         <div class="total"><dt>Total</dt><dd><?= e(money($b['total_amount'])) ?></dd></div>
-        <div class="after"><dt>Advance (<?= e(setting('advance_percent', '30')) ?>%)</dt><dd><?= e(money($advance)) ?></dd></div>
-        <div class="after"><dt>Security deposit (<?= e(ucfirst($b['deposit_status'])) ?>)</dt><dd><?= e(money($b['security_deposit'])) ?></dd></div>
+        <div class="after"><dt>Paid so far</dt><dd><?= e(money($pay['paid'])) ?></dd></div>
+        <div class="after"><dt>Balance due</dt><dd><?= e(money($pay['balance_due'])) ?></dd></div>
+        <div class="after"><dt>Advance required (<?= e(setting('advance_percent', '30')) ?>%)</dt><dd><?= e(money($pay['advance_required'])) ?></dd></div>
+        <div class="after"><dt>Security deposit received</dt><dd><?= e(money($pay['deposit_received'])) ?> of <?= e(money($pay['deposit_required'])) ?></dd></div>
+        <?php if ($pay['refunded'] > 0): ?><div class="after"><dt>Refunded</dt><dd><?= e(money($pay['refunded'])) ?></dd></div><?php endif; ?>
       </dl>
     </section>
+
+    <?php if ($payTypes): ?>
+      <section class="panel mt">
+        <h2>Record payment</h2>
+        <p class="muted small-text">Enter a payment after the customer sends proof on WhatsApp. Payments cannot be edited afterwards.</p>
+        <form method="post" novalidate>
+          <?= Csrf::field() ?>
+          <input type="hidden" name="action" value="payment">
+          <input type="hidden" name="booking_id" value="<?= (int) $b['booking_id'] ?>">
+          <label>Type
+            <select name="type">
+              <?php foreach ($payTypes as $t): ?>
+                <option value="<?= e($t) ?>" <?= $pv('type') === $t ? 'selected' : '' ?>><?= e(PaymentService::TYPES[$t]) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </label><?= field_error($payErrors, 'type') ?>
+          <label>Amount (PKR)
+            <input type="text" name="amount" inputmode="decimal" maxlength="13" value="<?= $pv('amount') ?>" required>
+          </label><?= field_error($payErrors, 'amount') ?>
+          <p class="hint">Advance still needed: <?= e(money(max(0, $pay['advance_required'] - $pay['advance_paid']))) ?> &middot; Balance due: <?= e(money($pay['balance_due'])) ?><?= $pay['refundable_left'] > 0 ? ' &middot; Refundable: ' . e(money($pay['refundable_left'])) : '' ?></p>
+          <label>Method
+            <select name="method">
+              <?php foreach (PaymentService::METHODS as $k => $label): ?>
+                <option value="<?= e($k) ?>" <?= $pv('method') === $k ? 'selected' : '' ?>><?= e($label) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </label><?= field_error($payErrors, 'method') ?>
+          <label>Reference (transaction ID, optional)
+            <input type="text" name="reference_no" maxlength="80" value="<?= $pv('reference_no') ?>">
+          </label><?= field_error($payErrors, 'reference_no') ?>
+          <label>Paid on
+            <input type="datetime-local" name="paid_at" max="<?= e($nowLocal) ?>" value="<?= $open === 'payment' ? $pv('paid_at') : e($nowLocal) ?>">
+          </label><?= field_error($payErrors, 'paid_at') ?>
+          <label>Note (optional)
+            <input type="text" name="notes" maxlength="255" value="<?= $pv('notes') ?>">
+          </label><?= field_error($payErrors, 'notes') ?>
+          <div class="cart-actions mt"><button class="btn" type="submit">Record payment</button></div>
+        </form>
+      </section>
+    <?php endif; ?>
 
     <?php if ($nonRef): ?>
       <div class="alert warning mt">The event starts within <?= BookingAdminService::NON_REFUNDABLE_DAYS ?> days. If this booking is cancelled now, the advance is non-refundable.</div>
@@ -122,7 +201,11 @@ require APP_PATH . '/views/header.php';
     <?php if ($pending): ?>
       <section class="panel mt">
         <h2>Confirm booking</h2>
-        <p class="muted small-text">Stock is re-checked and locked when you confirm. Confirm only after the advance has arrived.</p>
+        <?php if ($pay['advance_ok']): ?>
+          <p class="muted small-text">The advance of <?= e(money($pay['advance_paid'])) ?> is recorded. Stock is re-checked and locked when you confirm.</p>
+        <?php else: ?>
+          <p class="muted small-text">Record the advance of <?= e(money($pay['advance_required'])) ?> above first. Stock is locked only after the advance is received.</p>
+        <?php endif; ?>
         <?php if (isset($errors['confirm'])): ?>
           <div class="alert error"><?= e($errors['confirm']) ?>
             <?php foreach ($conflicts as $c): ?><div><?= e($c['name']) ?>: wanted <?= (int) $c['wanted'] ?>, only <?= (int) $c['available'] ?> free</div><?php endforeach; ?>
@@ -132,11 +215,10 @@ require APP_PATH . '/views/header.php';
           <?= Csrf::field() ?>
           <input type="hidden" name="action" value="confirm">
           <input type="hidden" name="booking_id" value="<?= (int) $b['booking_id'] ?>">
-          <label class="check"><input type="checkbox" name="advance_received" value="1"> I have received the advance of <?= e(money($advance)) ?></label>
           <label>Note (optional)
             <textarea name="note" rows="2" maxlength="500"><?= $noteVal('confirm') ?></textarea>
           </label>
-          <div class="cart-actions mt"><button class="btn" type="submit">Confirm booking</button></div>
+          <div class="cart-actions mt"><button class="btn" type="submit"<?= $pay['advance_ok'] ? '' : ' disabled' ?>>Confirm booking</button></div>
         </form>
       </section>
     <?php endif; ?>
