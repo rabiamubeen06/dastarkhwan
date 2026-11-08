@@ -10,6 +10,7 @@ $pageTitle = 'My bookings';
 require APP_PATH . '/views/header.php';
 ?>
 <div class="page-head">
+  <span class="eyebrow">My account</span>
   <h1>My bookings</h1>
   <p>Every request you have made, with its status, payments and invoice.</p>
 </div>

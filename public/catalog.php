@@ -58,6 +58,7 @@ $pageTitle = 'Catalog';
 require APP_PATH . '/views/header.php';
 ?>
 <div class="page-head">
+  <span class="eyebrow">Browse crockery</span>
   <h1>Catalog</h1>
   <p>Crockery, cutlery and serving ware for weddings, daawats and parties.</p>
 </div>

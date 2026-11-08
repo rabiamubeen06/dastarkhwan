@@ -43,6 +43,7 @@ $pageTitle = 'Categories';
 require APP_PATH . '/views/header.php';
 ?>
 <div class="page-head">
+  <span class="eyebrow">Catalog</span>
   <h1>Categories</h1>
   <p>Group your products. Customers see these as tabs in the catalog.</p>
 </div>

@@ -21,6 +21,7 @@ $pageTitle = 'Settings';
 require APP_PATH . '/views/header.php';
 ?>
 <div class="page-head">
+  <span class="eyebrow">System</span>
   <h1>Settings</h1>
   <p>Rules and contact details used across the shop. Changes apply to new booking requests; existing bookings keep their amounts.</p>
 </div>

@@ -46,6 +46,7 @@ $pageTitle = $pkg ? 'Edit package' : 'Add package';
 require APP_PATH . '/views/header.php';
 ?>
 <div class="page-head">
+  <span class="eyebrow">Catalog</span>
   <h1><?= $pkg ? 'Edit package' : 'Add package' ?></h1>
   <p>Set the quantity of each product the package includes. Leave the others blank.</p>
 </div>

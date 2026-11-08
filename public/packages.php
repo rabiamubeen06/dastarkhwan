@@ -60,6 +60,7 @@ $scripts   = ['assets/js/return.js'];
 require APP_PATH . '/views/header.php';
 ?>
 <div class="page-head">
+  <span class="eyebrow">Ready-made sets</span>
   <h1>Event packages</h1>
   <p>Start from a ready-made setting, then adjust the quantities in your cart.</p>
 </div>

@@ -34,30 +34,79 @@ $pendingCount = $isAdmin ? BookingAdminService::pendingCount() : 0;
 <div class="auth-shell">
   <aside class="auth-aside">
     <a class="brand" href="<?= e(url('/')) ?>"><?= logo_svg(28) ?><?= brand_ur() ?></a>
-    <div class="plate on-dark" aria-hidden="true"></div>
+    <img class="aside-photo" src="https://images.pexels.com/photos/12876507/pexels-photo-12876507.jpeg?auto=compress&cs=tinysrgb&w=1400" alt="">
     <p class="aside-text">Crockery for weddings, daawats and every gathering.</p>
   </aside>
   <main class="auth-main"><div class="auth-card">
+<?php elseif ($isAdmin): ?>
+<?php
+$adminGroups = [
+  'Overview' => [
+    ['admin/dashboard.php', 'Dashboard', $onDash],
+  ],
+  'Orders' => [
+    ['admin/bookings.php', 'Bookings', $onBookings, $pendingCount],
+  ],
+  'Catalog' => [
+    ['admin/products.php', 'Products', $onProducts],
+    ['admin/categories.php', 'Categories', $onCategories],
+    ['admin/packages.php', 'Packages', $onAdminPackages],
+    ['admin/inventory.php', 'Inventory', $onInventory],
+  ],
+  'Operations' => [
+    ['admin/delivery-zones.php', 'Delivery zones', $onZones],
+    ['admin/reports.php', 'Reports', $onReports],
+  ],
+  'People' => [
+    ['admin/customers.php', 'Customers & admins', $onCustomers],
+  ],
+  'System' => [
+    ['admin/settings.php', 'Settings', $onSettings],
+    ['catalog.php', 'View storefront', $onCatalog],
+  ],
+];
+?>
+<div class="admin-shell">
+  <input type="checkbox" id="side-toggle" class="side-toggle" hidden>
+  <aside class="sidebar">
+    <div class="side-brand">
+      <a class="brand" href="<?= e(url('admin/dashboard.php')) ?>"><?= logo_svg(26) ?><?= brand_ur() ?></a>
+      <span class="side-role">Admin panel</span>
+    </div>
+    <nav class="side-nav" aria-label="Admin">
+      <?php foreach ($adminGroups as $group => $links): ?>
+        <div class="side-group">
+          <div class="side-title"><?= e($group) ?></div>
+          <?php foreach ($links as $l): ?>
+            <a href="<?= e(url($l[0])) ?>" class="<?= $l[2] ? 'active' : '' ?>"><?= e($l[1]) ?><?php if (!empty($l[3])): ?> <span class="badge"><?= (int) $l[3] ?></span><?php endif; ?></a>
+          <?php endforeach; ?>
+        </div>
+      <?php endforeach; ?>
+    </nav>
+    <div class="side-user">
+      <span class="avatar"><?= e(mb_strtoupper(mb_substr($u['name'], 0, 1))) ?></span>
+      <span class="name"><?= e($u['name']) ?></span>
+      <form method="post" action="<?= e(url('logout.php')) ?>" class="inline">
+        <?= Csrf::field() ?>
+        <button type="submit" class="linkbtn">Log out</button>
+      </form>
+    </div>
+  </aside>
+  <label for="side-toggle" class="side-scrim" aria-hidden="true"></label>
+  <div class="admin-main">
+    <div class="admin-bar">
+      <label for="side-toggle" class="menu-btn" role="button">&#9776; Menu</label>
+      <span class="admin-bar-title"><?= e($pageTitle ?? 'Admin') ?></span>
+    </div>
+    <main class="wrap">
 <?php else: ?>
 <header class="top"><div class="top-in">
   <a class="brand" href="<?= e(url('/')) ?>"><?= logo_svg(26) ?><?= brand_ur() ?></a>
   <nav>
     <a href="<?= e(url('catalog.php')) ?>" class="<?= $onCatalog ? 'active' : '' ?>">Catalog</a>
-    <?php if ($isAdmin): ?>
-      <a href="<?= e(url('admin/bookings.php')) ?>" class="<?= $onBookings ? 'active' : '' ?>">Bookings<?php if ($pendingCount > 0): ?> <span class="badge"><?= $pendingCount ?></span><?php endif; ?></a>
-      <a href="<?= e(url('admin/products.php')) ?>" class="<?= $onProducts ? 'active' : '' ?>">Products</a>
-      <a href="<?= e(url('admin/inventory.php')) ?>" class="<?= $onInventory ? 'active' : '' ?>">Inventory</a>
-      <a href="<?= e(url('admin/packages.php')) ?>" class="<?= $onAdminPackages ? 'active' : '' ?>">Packages</a>
-      <a href="<?= e(url('admin/categories.php')) ?>" class="<?= $onCategories ? 'active' : '' ?>">Categories</a>
-      <a href="<?= e(url('admin/delivery-zones.php')) ?>" class="<?= $onZones ? 'active' : '' ?>">Delivery</a>
-      <a href="<?= e(url('admin/reports.php')) ?>" class="<?= $onReports ? 'active' : '' ?>">Reports</a>
-      <a href="<?= e(url('admin/customers.php')) ?>" class="<?= $onCustomers ? 'active' : '' ?>">Customers</a>
-      <a href="<?= e(url('admin/settings.php')) ?>" class="<?= $onSettings ? 'active' : '' ?>">Settings</a>
-    <?php else: ?>
       <a href="<?= e(url('packages.php')) ?>" class="<?= $onPackages ? 'active' : '' ?>">Packages</a>
       <?php if ($u): ?><a href="<?= e(url('customer/bookings.php')) ?>" class="<?= $onMyBookings ? 'active' : '' ?>">Bookings</a><?php endif; ?>
       <a href="<?= e(url('cart.php')) ?>" class="<?= $onCart ? 'active' : '' ?>">Cart<?php if ($cartCount > 0): ?> <span class="badge"><?= $cartCount ?></span><?php endif; ?></a>
-    <?php endif; ?>
     <?php if ($u): ?>
       <a href="<?= e(url(Auth::homeUrl())) ?>" class="<?= $onDash ? 'active' : '' ?>">Dashboard</a>
       <div class="user">

@@ -18,6 +18,7 @@ $pageTitle = 'Bookings';
 require APP_PATH . '/views/header.php';
 ?>
 <div class="page-head">
+  <span class="eyebrow">Orders</span>
   <h1>Bookings</h1>
   <p>Review requests, confirm them once the advance is in, and follow each booking through its stages.</p>
 </div>

@@ -91,6 +91,7 @@ $scripts   = ['assets/js/cart.js'];
 require APP_PATH . '/views/header.php';
 ?>
 <div class="page-head">
+  <span class="eyebrow">Your order</span>
   <h1>Your cart</h1>
   <p>Quantities are limited to what is available for your event dates.</p>
 </div>

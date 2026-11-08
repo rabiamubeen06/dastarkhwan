@@ -55,6 +55,7 @@ $pageTitle = 'Reports';
 require APP_PATH . '/views/header.php';
 ?>
 <div class="page-head">
+  <span class="eyebrow">Operations</span>
   <h1>Reports</h1>
   <p>Income, stock performance, unpaid balances and losses. Every report can be downloaded as a CSV file for Excel.</p>
 </div>

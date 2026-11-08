@@ -94,19 +94,29 @@ $noteVal   = fn(string $a): string => e($open === $a ? trim($str('note')) : '');
 $pageTitle = 'Booking ' . $b['booking_no'];
 require APP_PATH . '/views/header.php';
 ?>
-<p class="small-text"><a href="<?= e(url('admin/bookings.php')) ?>">&larr; All bookings</a></p>
+<nav class="crumbs" aria-label="Breadcrumb"><a href="<?= e(url('admin/bookings.php')) ?>">Bookings</a> <span>/</span> <span><?= e($b['booking_no']) ?></span></nav>
 
-<div class="confirm-top">
-  <div>
-    <span class="muted small-text">Booking number</span>
+<section class="bk-head">
+  <div class="bk-head-main">
+    <span class="eyebrow">Booking</span>
     <div class="bk-no"><?= e($b['booking_no']) ?></div>
+    <p class="muted"><?= e($b['full_name']) ?> &middot; <?= e($fmt($b['start_date'])) ?> to <?= e($fmt($b['end_date'])) ?></p>
   </div>
-  <span class="status <?= e(BookingAdminService::statusClass($b['status'])) ?>"><?= e(BookingAdminService::statusLabel($b['status'])) ?></span>
-</div>
+  <div class="bk-head-side">
+    <span class="status <?= e(BookingAdminService::statusClass($b['status'])) ?>"><?= e(BookingAdminService::statusLabel($b['status'])) ?></span>
+    <div class="bk-kpis">
+      <div><span>Total</span><strong><?= e(money($b['total_amount'])) ?></strong></div>
+      <div><span>Paid</span><strong><?= e(money($pay['paid'])) ?></strong></div>
+      <div><span>Balance due</span><strong><?= e(money($pay['balance_due'])) ?></strong></div>
+    </div>
+  </div>
+</section>
 
 <div class="checkout">
   <div>
-    <dl class="facts">
+    <section class="panel">
+    <h2 class="sec-h">Customer and event</h2>
+    <dl class="facts facts-2">
       <div><dt>Customer</dt><dd><?= e($b['full_name']) ?> &middot; <?= e($b['phone']) ?> &middot; <?= e($b['email']) ?>
         <?php if ($waLink !== ''): ?> &middot; <a href="<?= e($waLink) ?>" target="_blank" rel="noopener">WhatsApp</a><?php endif; ?></dd></div>
       <div><dt>Event</dt><dd><?= e(BookingService::EVENT_TYPES[$b['event_type']] ?? $b['event_type']) ?><?= $b['event_name'] ? ' &middot; ' . e($b['event_name']) : '' ?></dd></div>
@@ -119,8 +129,11 @@ require APP_PATH . '/views/header.php';
       <?php if ($b['confirmed_by_name']): ?><div><dt>Confirmed by</dt><dd><?= e($b['confirmed_by_name']) ?></dd></div><?php endif; ?>
       <?php if ($b['admin_notes']): ?><div><dt>Internal notes</dt><dd><?= nl2br(e($b['admin_notes'])) ?></dd></div><?php endif; ?>
     </dl>
+    </section>
 
-    <div class="cart-table-wrap mt">
+    <h2 class="sec-h">Items</h2>
+
+    <div class="cart-table-wrap">
       <table class="cart-table">
         <thead><tr><th>Item</th><th>Quantity</th><?php if ($pending): ?><th>Free for these dates</th><?php endif; ?><th class="num">Line total</th></tr></thead>
         <tbody>
@@ -141,14 +154,14 @@ require APP_PATH . '/views/header.php';
     </div>
 
     <?php if ($return): ?>
-      <h2 class="mt">Return</h2>
-      <dl class="facts">
+      <h2 class="sec-h">Return</h2>
+      <div class="panel"><dl class="facts facts-2">
         <div><dt>Received</dt><dd><?= e(date('j M Y, g:i a', strtotime($return['returned_at']))) ?> by <?= e((string) $return['received_by_name']) ?></dd></div>
         <div><dt>Late fee</dt><dd><?= e(money($return['late_fee'])) ?> (<?= (int) $return['late_days'] ?> late day<?= (int) $return['late_days'] === 1 ? '' : 's' ?>)</dd></div>
         <div><dt>Damage and loss charges</dt><dd><?= e(money($return['damage_total'])) ?></dd></div>
         <div><dt>Total charges</dt><dd><strong><?= e(money($return['charges_total'])) ?></strong> <span class="muted small-text">(settled against the security deposit)</span></dd></div>
         <?php if ($return['notes']): ?><div><dt>Return note</dt><dd><?= e($return['notes']) ?></dd></div><?php endif; ?>
-      </dl>
+      </dl></div>
       <div class="cart-table-wrap mt">
         <table class="cart-table">
           <thead><tr><th>Item</th><th>Returned</th><th>Damaged</th><th>Missing</th><th class="num">Charge</th></tr></thead>
@@ -167,7 +180,7 @@ require APP_PATH . '/views/header.php';
       </div>
     <?php endif; ?>
 
-    <h2 class="mt">Payments</h2>
+    <h2 class="sec-h">Payments</h2>
     <?php if (!$payments): ?>
       <p class="muted small-text">No payments recorded yet.</p>
     <?php else: ?>
@@ -190,7 +203,7 @@ require APP_PATH . '/views/header.php';
     <?php endif; ?>
   </div>
 
-  <div>
+  <div class="bk-side">
     <section class="panel quote-panel">
       <h2>Amounts</h2>
       <dl class="quote">

@@ -27,6 +27,7 @@ require APP_PATH . '/views/header.php';
 ?>
 <p class="small-text"><a href="<?= e(url('admin/customers.php')) ?>">&larr; Customers</a></p>
 <div class="page-head">
+  <span class="eyebrow">People</span>
   <h1>Admin accounts</h1>
   <p>Everyone listed here has full access to the shop: bookings, payments, stock, settings and customers.</p>
 </div>

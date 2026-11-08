@@ -19,6 +19,7 @@ $pageTitle = 'Booking ' . $b['booking_no'];
 require APP_PATH . '/views/header.php';
 ?>
 <div class="page-head">
+  <span class="eyebrow">Booking</span>
   <h1>Request received</h1>
   <p>Thank you. Keep your booking number for any message to the shop.</p>
 </div>

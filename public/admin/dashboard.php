@@ -10,11 +10,20 @@ $more = fn(array $block): int => max(0, $block['total'] - count($block['rows']))
 $pageTitle = 'Admin dashboard';
 require APP_PATH . '/views/header.php';
 ?>
-<div class="page-head">
-  <h1>Dashboard</h1>
-  <p><?= e(date('l, j F Y')) ?> &middot; Signed in as <?= e($user['name']) ?></p>
-</div>
+<section class="admin-hero">
+  <div class="admin-hero-text">
+    <span class="eyebrow">Admin dashboard</span>
+    <h1>Welcome back, <?= e($user['name']) ?></h1>
+    <p><?= e(date('l, j F Y')) ?> &middot; Here is what needs your attention today.</p>
+    <div class="actions">
+      <a class="btn" href="<?= e(url('admin/bookings.php?status=pending')) ?>">Review requests</a>
+      <a class="btn ghost" href="<?= e(url('admin/inventory.php')) ?>">Inventory</a>
+    </div>
+  </div>
+  <div class="admin-hero-photo"><img src="https://images.pexels.com/photos/19826009/pexels-photo-19826009.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="" loading="lazy"></div>
+</section>
 
+<h2 class="section-title">Today at a glance</h2>
 <div class="stats">
   <a class="stat <?= $d['pending']['total'] > 0 ? 'attn' : '' ?>" href="<?= e(url('admin/bookings.php?status=pending')) ?>">
     <span class="stat-n"><?= (int) $d['pending']['total'] ?></span><span class="stat-l">Pending requests</span>

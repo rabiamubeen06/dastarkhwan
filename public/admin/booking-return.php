@@ -44,6 +44,7 @@ require APP_PATH . '/views/header.php';
 <p class="small-text"><a href="<?= e(url('admin/booking.php?id=' . $id)) ?>">&larr; Booking <?= e($b['booking_no']) ?></a></p>
 
 <div class="page-head">
+  <span class="eyebrow">Orders</span>
   <h1>Receive items</h1>
   <p class="muted"><?= e($b['full_name']) ?> &middot; rental <?= e($fmt($b['start_date'])) ?> to <?= e($fmt($b['end_date'])) ?>. Count every unit as returned, damaged or missing.</p>
 </div>

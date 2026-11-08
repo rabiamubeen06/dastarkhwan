@@ -51,6 +51,7 @@ $pageTitle = 'Delivery zones';
 require APP_PATH . '/views/header.php';
 ?>
 <div class="page-head">
+  <span class="eyebrow">Operations</span>
   <h1>Delivery zones</h1>
   <p>Areas you deliver to and the fee for each. Customers pick one at checkout when they choose delivery.</p>
 </div>

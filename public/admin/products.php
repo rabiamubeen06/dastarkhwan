@@ -33,6 +33,7 @@ require APP_PATH . '/views/header.php';
 ?>
 <div class="page-head head-row">
   <div>
+    <span class="eyebrow">Catalog</span>
     <h1>Products</h1>
     <p>Rates, replacement cost and stock for everything you rent out.</p>
   </div>

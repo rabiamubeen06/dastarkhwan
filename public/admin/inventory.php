@@ -25,6 +25,7 @@ $pageTitle = 'Inventory';
 require APP_PATH . '/views/header.php';
 ?>
 <div class="page-head">
+  <span class="eyebrow">Catalog</span>
   <h1>Inventory calendar</h1>
   <p>Units a customer could rent on each date, after bookings, buffer days and damaged, lost or repaired stock.</p>
 </div>

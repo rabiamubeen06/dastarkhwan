@@ -61,6 +61,7 @@ $pageTitle = 'Checkout';
 require APP_PATH . '/views/header.php';
 ?>
 <div class="page-head">
+  <span class="eyebrow">Checkout</span>
   <h1>Submit your booking request</h1>
   <p>The shop reviews every request. Nothing is charged now.</p>
 </div>

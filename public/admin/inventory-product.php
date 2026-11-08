@@ -35,6 +35,7 @@ require APP_PATH . '/views/header.php';
 <p class="small-text"><a href="<?= e(url('admin/inventory.php')) ?>">&larr; Inventory calendar</a></p>
 <div class="page-head head-row">
   <div>
+    <span class="eyebrow">Catalog</span>
     <h1><?= e($product['name']) ?></h1>
     <p><?= e($product['sku']) ?><?= (int) $product['is_active'] === 1 ? '' : ' &middot; hidden from the catalog' ?></p>
   </div>

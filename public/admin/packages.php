@@ -19,6 +19,7 @@ require APP_PATH . '/views/header.php';
 ?>
 <div class="page-head head-row">
   <div>
+    <span class="eyebrow">Catalog</span>
     <h1>Packages</h1>
     <p>Ready-made template packages customers can add to their cart, with an optional discount.</p>
   </div>

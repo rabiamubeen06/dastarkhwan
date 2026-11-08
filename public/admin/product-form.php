@@ -44,6 +44,7 @@ $pageTitle = $product ? 'Edit product' : 'Add product';
 require APP_PATH . '/views/header.php';
 ?>
 <div class="page-head">
+  <span class="eyebrow">Catalog</span>
   <h1><?= $product ? 'Edit product' : 'Add product' ?></h1>
   <p><?= $product ? e($product['sku']) : 'Fill in the details customers will see in the catalog.' ?></p>
 </div>
