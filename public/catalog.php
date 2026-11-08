@@ -23,13 +23,19 @@ $link = function (array $over = []) use ($filters): string {
 $where = ['p.is_active = 1'];
 $params = [];
 if ($cat > 0)        { $where[] = 'p.category_id = ?';  $params[] = $cat; }
-if ($q !== '')       { $where[] = '(p.name LIKE ? OR p.description LIKE ?)'; $params[] = "%$q%"; $params[] = "%$q%"; }
+if ($q !== '') {
+    // Also match the singular form ("plates" finds "plate"), the category name and the SKU.
+    $term = preg_replace('/(es|s)$/i', '', $q);
+    if (mb_strlen($term) < 3) { $term = $q; }
+    $where[] = '(p.name LIKE ? OR p.description LIKE ? OR p.sku LIKE ? OR c.name LIKE ?)';
+    array_push($params, "%$term%", "%$term%", "%$term%", "%$term%");
+}
 if ($material !== ''){ $where[] = 'p.material = ?';     $params[] = $material; }
 if ($min !== null)   { $where[] = 'p.rent_per_day >= ?'; $params[] = $min; }
 if ($max !== null)   { $where[] = 'p.rent_per_day <= ?'; $params[] = $max; }
 $whereSql = implode(' AND ', $where);
 
-$st = $pdo->prepare("SELECT COUNT(*) FROM products p WHERE $whereSql");
+$st = $pdo->prepare("SELECT COUNT(*) FROM products p JOIN categories c ON c.category_id = p.category_id WHERE $whereSql");
 $st->execute($params);
 $total = (int) $st->fetchColumn();
 $pages = max(1, (int) ceil($total / $perPage));
