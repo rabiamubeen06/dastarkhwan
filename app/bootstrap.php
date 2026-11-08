@@ -23,6 +23,7 @@ require __DIR__ . '/services/DepositService.php';
 require __DIR__ . '/services/InventoryService.php';
 require __DIR__ . '/services/DashboardService.php';
 require __DIR__ . '/services/UserAdminService.php';
+require __DIR__ . '/services/ReportService.php';
 
 date_default_timezone_set('Asia/Karachi');
 error_reporting(E_ALL);

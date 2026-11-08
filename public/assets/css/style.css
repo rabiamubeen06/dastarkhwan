@@ -306,3 +306,7 @@ input.qty.remarks{width:100%;min-width:140px}
 /* Let the top bar wrap when the admin menu is wider than the screen */
 .top-in{height:auto;min-height:64px;flex-wrap:wrap;padding-top:8px;padding-bottom:8px}
 .top nav{flex-wrap:wrap}
+
+/* Reports */
+.cart-table .total-row td{font-weight:600;border-top:1px solid var(--ink);background:var(--bg)}
+.toolbar input[type=date]{min-width:150px}
